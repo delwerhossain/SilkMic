@@ -38,3 +38,10 @@ wraparound, zero-timestamp jumps, and the read-before-write / writer-stopped sil
 ./uninstall-driver.sh            # remove + restart coreaudiod
 ```
 Installing restarts `coreaudiod`, so **all** audio drops for a moment.
+
+## Keepalive (SilkMic)
+The visible mic is only alive while the SilkMic app writes the custom `'kpal'` property
+(any `UInt32`, every ~4 s; see `SilkMic/Voice/VirtualMicKeepalive.swift`). After 10 s without a
+write the driver reports `DeviceIsAlive = 0` and `CanBeDefault(System)Device = 0`, and notifies
+the HAL, so macOS falls back to a real microphone instead of every app recording silence.
+The window math is in `SilkMicDriver/sm_keepalive.h` and tested by `tests/test_sm_keepalive.c`.

@@ -1,6 +1,7 @@
 // SilkMicDriver.c — "SilkMic" userspace CoreAudio AudioServerPlugIn (HAL plug-in).
 // Based on NoNoiseMic.c from NoNoise Mac (MIT, (c) 2025 Ghostkwebb, (c) 2026 ivalsaraj; see Licenses/NoNoise-MIT.txt).
-// Modified by Delwer Hossain, 2026: renamed for SilkMic (device names, UIDs, bundle ID, factory UUID).
+// Modified by Delwer Hossain, 2026: renamed for SilkMic (device names, UIDs, bundle ID, factory UUID)
+// and added the app keepalive (kpal) that hides the mic when the SilkMic app is gone.
 //
 // Original implementation written against the PUBLIC AudioServerPlugIn API
 // (<CoreAudio/AudioServerPlugIn.h>). It is modeled on the structure of Apple's documented
@@ -30,6 +31,8 @@
 
 #include "nn_ring.h"
 #include "nn_clock.h"
+#include "sm_keepalive.h"
+#include <dispatch/dispatch.h>
 
 #pragma mark - Shared contract constants
 
@@ -45,6 +48,10 @@
 // sourceMode custom property. Use the char literal so the compiler computes the FourCharCode
 // (a hand-typed hex with a transposed digit fails SILENTLY and the A2 toggle never switches).
 #define kSourceModeSelector     ((AudioObjectPropertySelector)'srcm')   // == 0x7372636D
+// SilkMic keepalive: the app writes any UInt32 here every few seconds (visible mic only).
+#define kKeepaliveSelector      ((AudioObjectPropertySelector)'kpal')
+#define kKeepaliveTimeoutSec    10.0
+#define kKeepaliveCheckSec      2
 
 static const Float64 kSampleRate          = 48000.0;
 static const UInt32  kChannels            = 2;
@@ -78,6 +85,12 @@ static bool     gRingInit = false;
 
 // 0 = loopback (A1 default), 1 = xpc (A2). Read on the IO thread → atomic.
 static _Atomic uint32_t gSourceMode = 0;
+
+// Last keepalive from the SilkMic app (mach ticks; 0 = never) and the alive state we last
+// announced to the HAL, so a change can be notified exactly once.
+static _Atomic uint64_t gLastKeepalive = 0;
+static _Atomic bool     gAnnouncedAlive = false;
+static dispatch_source_t gKeepaliveTimer = NULL;
 
 #pragma mark - Helpers
 
@@ -121,6 +134,27 @@ static UInt32 deviceStreamList(AudioObjectID dev, AudioObjectPropertyScope scope
 
 static void NotifyChanged(AudioObjectID obj, const AudioObjectPropertyAddress *addr) {
     if (gHost && gHost->PropertiesChanged) gHost->PropertiesChanged(gHost, obj, 1, addr);
+}
+
+static uint64_t keepaliveTimeoutTicks(void) {
+    return (uint64_t)(kKeepaliveTimeoutSec * host_ticks_per_second());
+}
+
+static bool micAppAlive(void) {
+    return sm_keepalive_is_alive(atomic_load(&gLastKeepalive), mach_absolute_time(), keepaliveTimeoutTicks());
+}
+
+// Tell the HAL when the visible mic flips between usable and not, so macOS re-evaluates the
+// default input (and apps on it fall back to a real mic) without waiting for a property read.
+static void AnnounceAliveIfChanged(void) {
+    bool alive = micAppAlive();
+    if (atomic_exchange(&gAnnouncedAlive, alive) == alive) return;
+    AudioObjectPropertyAddress addrs[3] = {
+        { kAudioDevicePropertyDeviceIsAlive, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain },
+        { kAudioDevicePropertyDeviceCanBeDefaultDevice, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain },
+        { kAudioDevicePropertyDeviceCanBeDefaultSystemDevice, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain },
+    };
+    if (gHost && gHost->PropertiesChanged) gHost->PropertiesChanged(gHost, kObjectID_Device_Mic, 3, addrs);
 }
 
 #pragma mark - COM plumbing (forward decls)
@@ -211,6 +245,15 @@ static ULONG SilkMicDriver_Release(void *inDriver) { (void)inDriver; return 1; }
 static OSStatus SilkMicDriver_Initialize(AudioServerPlugInDriverRef inDriver, AudioServerPlugInHostRef inHost) {
     if (inDriver != gDriverRef) return kAudioHardwareBadObjectError;
     gHost = inHost;
+    // Poll the keepalive so the mic disappears even when nobody reads its properties.
+    gKeepaliveTimer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0,
+                                             dispatch_get_global_queue(QOS_CLASS_UTILITY, 0));
+    if (gKeepaliveTimer) {
+        dispatch_source_set_timer(gKeepaliveTimer, dispatch_time(DISPATCH_TIME_NOW, 0),
+                                  (uint64_t)kKeepaliveCheckSec * NSEC_PER_SEC, NSEC_PER_SEC / 2);
+        dispatch_source_set_event_handler_f(gKeepaliveTimer, (dispatch_function_t)AnnounceAliveIfChanged);
+        dispatch_resume(gKeepaliveTimer);
+    }
     return noErr;
 }
 
@@ -292,7 +335,7 @@ static OSStatus SilkMicDriver_GetPropertyDataSize(AudioServerPlugInDriverRef inD
             case kAudioDevicePropertyPreferredChannelsForStereo:   *outDataSize = 2 * sizeof(UInt32); return noErr;
             default:
                 // sourceMode is advertised by the visible mic only (see GetPropertyData).
-                if (sel == kSourceModeSelector && isMicDevice(inObjectID)) { *outDataSize = sizeof(UInt32); return noErr; }
+                if ((sel == kSourceModeSelector || sel == kKeepaliveSelector) && isMicDevice(inObjectID)) { *outDataSize = sizeof(UInt32); return noErr; }
                 return kAudioHardwareUnknownPropertyError;
         }
     }
@@ -388,7 +431,8 @@ static OSStatus SilkMicDriver_GetPropertyData(AudioServerPlugInDriverRef inDrive
             case kAudioDevicePropertyModelUID:  PUT_CFSTRING(kModelUID);
             case kAudioDevicePropertyTransportType: PUT_SCALAR(UInt32, kAudioDeviceTransportTypeVirtual);
             case kAudioDevicePropertyClockDomain: PUT_SCALAR(UInt32, 0);
-            case kAudioDevicePropertyDeviceIsAlive: PUT_SCALAR(UInt32, 1);
+            // The visible mic is only alive while the SilkMic app keeps it alive (see sm_keepalive.h).
+            case kAudioDevicePropertyDeviceIsAlive: PUT_SCALAR(UInt32, (UInt32)((!mic || micAppAlive()) ? 1 : 0));
             case kAudioDevicePropertyDeviceIsRunning: {
                 if (inDataSize < sizeof(UInt32)) return kAudioHardwareBadPropertySizeError;
                 pthread_mutex_lock(&gStateMutex);
@@ -398,8 +442,8 @@ static OSStatus SilkMicDriver_GetPropertyData(AudioServerPlugInDriverRef inDrive
             }
             // The hidden engine must NEVER be auto-selected as a default device — only the
             // visible mic is input-eligible. (output scope for the engine returns 0.)
-            case kAudioDevicePropertyDeviceCanBeDefaultDevice:       PUT_SCALAR(UInt32, (UInt32)(mic ? 1 : 0));
-            case kAudioDevicePropertyDeviceCanBeDefaultSystemDevice: PUT_SCALAR(UInt32, (UInt32)(mic ? 1 : 0));
+            case kAudioDevicePropertyDeviceCanBeDefaultDevice:       PUT_SCALAR(UInt32, (UInt32)((mic && micAppAlive()) ? 1 : 0));
+            case kAudioDevicePropertyDeviceCanBeDefaultSystemDevice: PUT_SCALAR(UInt32, (UInt32)((mic && micAppAlive()) ? 1 : 0));
             case kAudioDevicePropertyLatency:       PUT_SCALAR(UInt32, 0);
             case kAudioDevicePropertySafetyOffset:  PUT_SCALAR(UInt32, 0);
             case kAudioDevicePropertyIsHidden:      PUT_SCALAR(UInt32, (UInt32)(mic ? 0 : 1));
@@ -439,6 +483,9 @@ static OSStatus SilkMicDriver_GetPropertyData(AudioServerPlugInDriverRef inDrive
                 // the hidden engine does not advertise it.
                 if (sel == kSourceModeSelector && mic) {
                     PUT_SCALAR(UInt32, atomic_load(&gSourceMode));
+                }
+                if (sel == kKeepaliveSelector && mic) {
+                    PUT_SCALAR(UInt32, (UInt32)(micAppAlive() ? 1 : 0));
                 }
                 return kAudioHardwareUnknownPropertyError;
         }
@@ -504,7 +551,7 @@ static OSStatus SilkMicDriver_IsPropertySettable(AudioServerPlugInDriverRef inDr
         case kAudioDevicePropertyNominalSampleRate:
             *outIsSettable = true; break;
         default:
-            *outIsSettable = (inAddress->mSelector == kSourceModeSelector);
+            *outIsSettable = (inAddress->mSelector == kSourceModeSelector || inAddress->mSelector == kKeepaliveSelector);
             break;
     }
     return noErr;
@@ -522,6 +569,14 @@ static OSStatus SilkMicDriver_SetPropertyData(AudioServerPlugInDriverRef inDrive
         atomic_store(&gSourceMode, mode);
         AudioObjectPropertyAddress a = { kSourceModeSelector, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain };
         NotifyChanged(inObjectID, &a);
+        return noErr;
+    }
+
+    // Keepalive from the SilkMic app — visible mic only. The value is ignored; the write is the signal.
+    if (isMicDevice(inObjectID) && inAddress->mSelector == kKeepaliveSelector) {
+        if (inDataSize < sizeof(UInt32)) return kAudioHardwareBadPropertySizeError;
+        atomic_store(&gLastKeepalive, mach_absolute_time());
+        AnnounceAliveIfChanged();
         return noErr;
     }
 
