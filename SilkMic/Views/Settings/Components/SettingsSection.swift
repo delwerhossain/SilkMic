@@ -22,11 +22,8 @@ struct SettingsSection<Content: View>: View {
             VStack(spacing: 0) {
                 content()
             }
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
-            }
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .silkGlassCard(cornerRadius: 12)
         }
     }
 }

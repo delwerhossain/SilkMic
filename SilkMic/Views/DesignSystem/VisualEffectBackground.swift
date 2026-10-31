@@ -44,9 +44,8 @@ extension View {
     /// `.popover` material so it tracks system appearance natively.
     /// Name kept for source compatibility; rename pending a follow-up sweep.
     func darkGlassBackground() -> some View {
-        self
-            .background(Color.popupBackgroundOverlay)
-            .background(VisualEffectBackground(material: .popover, blendingMode: .behindWindow))
+        // SilkMic: Liquid Glass with the silk aurora on macOS 26+, popover material before.
+        self.silkPanelBackground()
     }
 
     /// Applies the lifted-card background used by the EQ panel.
