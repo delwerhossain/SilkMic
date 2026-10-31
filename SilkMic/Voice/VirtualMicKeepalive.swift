@@ -5,12 +5,14 @@ import os
 
 /// Keeps the SilkMic virtual mic alive while the app runs.
 ///
-/// The driver hides the visible mic (not alive, not default-eligible) when it has not heard from
-/// the app for 10 s, so a crashed, quit or deleted app never leaves every other app recording
-/// silence. This writes the driver's `'kpal'` property every few seconds. If the driver is not
-/// installed, each tick is a cheap no-op until it appears.
+/// The driver publishes the visible "SilkMic" mic only while it hears from the app; after 10 s of
+/// silence it unplugs the mic, so a crashed, quit or deleted app never leaves every other app
+/// recording silence. This writes the driver's `'kpal'` property on the hidden engine device
+/// (always published) every few seconds. If the driver is not installed, each tick is a cheap
+/// no-op until it appears.
 nonisolated final class VirtualMicKeepalive: @unchecked Sendable {
     static let micUID = "SilkMic:visible:48k2ch"
+    static let engineUID = "SilkMic:engine:48k2ch"
     private static let selector = AudioObjectPropertySelector(0x6B70_616C) // 'kpal'
     private static let interval: DispatchTimeInterval = .seconds(4)
 
@@ -38,7 +40,7 @@ nonisolated final class VirtualMicKeepalive: @unchecked Sendable {
     }
 
     private func tick() {
-        guard let device = Self.resolveDevice() else {
+        guard let device = Self.resolveDevice(uid: Self.engineUID) else {
             if lastLoggedFound != false { logger.info("SilkMic virtual mic not installed; keepalive idle") }
             lastLoggedFound = false
             return
@@ -48,8 +50,9 @@ nonisolated final class VirtualMicKeepalive: @unchecked Sendable {
             mScope: kAudioObjectPropertyScopeGlobal,
             mElement: kAudioObjectPropertyElementMain
         )
-        var value: UInt32 = 1
-        let status = AudioObjectSetPropertyData(device, &address, 0, nil, UInt32(MemoryLayout<UInt32>.size), &value)
+        // Custom HAL properties carry CFPropertyList data, so the keepalive is a CFNumber.
+        var value: CFPropertyList = NSNumber(value: 1)
+        let status = AudioObjectSetPropertyData(device, &address, 0, nil, UInt32(MemoryLayout<CFPropertyList>.size), &value)
         if status != noErr {
             logger.error("Keepalive write failed: \(status)")
         } else if lastLoggedFound != true {
@@ -59,13 +62,13 @@ nonisolated final class VirtualMicKeepalive: @unchecked Sendable {
     }
 
     /// Looks the device up by UID each time: AudioObjectIDs change when coreaudiod restarts.
-    static func resolveDevice() -> AudioObjectID? {
+    static func resolveDevice(uid deviceUID: String) -> AudioObjectID? {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyTranslateUIDToDevice,
             mScope: kAudioObjectPropertyScopeGlobal,
             mElement: kAudioObjectPropertyElementMain
         )
-        var uid = micUID as CFString
+        var uid = deviceUID as CFString
         var device = AudioObjectID(kAudioObjectUnknown)
         var size = UInt32(MemoryLayout<AudioObjectID>.size)
         let status = withUnsafeMutablePointer(to: &uid) { uidPtr in
