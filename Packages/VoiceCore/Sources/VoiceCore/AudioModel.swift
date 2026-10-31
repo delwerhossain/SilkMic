@@ -1,4 +1,5 @@
 import Foundation
+// Modified by Delwer Hossain, 2026 (SilkMic): device names/UIDs, remembered source mic.
 import AVFoundation
 import AVFAudio
 import Combine
@@ -17,9 +18,15 @@ public class AudioModel: NSObject, ObservableObject, AVCaptureAudioDataOutputSam
     @Published public var selectedInputDeviceID: String = "" { // IDs are Strings in AVCapture
         didSet {
              guard selectedInputDeviceID != oldValue else { return }
+             // SilkMic: remember the source mic by its stable unique ID across launches
+             // (NoNoise forgot it, so a reconnect or restart fell back to whatever was default).
+             if !selectedInputDeviceID.isEmpty {
+                 UserDefaults.standard.set(selectedInputDeviceID, forKey: Self.savedInputDeviceKey)
+             }
              setupCaptureSession()
         }
     }
+    static let savedInputDeviceKey = "silkmic.inputDeviceUID"
     @Published public var errorMessage: String?
     @Published public var activeOutputDeviceName: String = "Unknown"
     @Published public var permissionStatus: String = "Unknown"
@@ -843,7 +850,7 @@ public class AudioModel: NSObject, ObservableObject, AVCaptureAudioDataOutputSam
             selectedIsApprovedSink: selectedInfo.map(VirtualMicRouting.isApprovedRouteTarget) ?? false,
             resolvedEngine: deviceID(forUID: VirtualMicRouting.engineDeviceUID)
         ) else {
-            errorMessage = "No NoNoise Mic sink found. Install the NoNoise Mic driver so other apps can receive cleaned audio."
+            errorMessage = "SilkMic virtual mic not found. Install the SilkMic driver so other apps can receive cleaned audio."
             return
         }
 
@@ -856,7 +863,7 @@ public class AudioModel: NSObject, ObservableObject, AVCaptureAudioDataOutputSam
                                           &currentDevice,
                                           size)
         guard status == noErr else {
-            errorMessage = "Could not route audio to NoNoise Mic. Restart NoNoise or reconnect the audio device."
+            errorMessage = "Could not route audio to the SilkMic virtual mic. Restart SilkMic or reconnect the audio device."
             return
         }
 
@@ -913,9 +920,14 @@ public class AudioModel: NSObject, ObservableObject, AVCaptureAudioDataOutputSam
             if devs.contains(where: { $0.uniqueID == self.selectedInputDeviceID }) {
                 return
             }
-            if let defaultDev = AVCaptureDevice.default(for: .audio),
-               devs.contains(where: { $0.uniqueID == defaultDev.uniqueID }) {
-                self.selectedInputDeviceID = defaultDev.uniqueID
+            // SilkMic source choice, in order: the mic the user picked last time (if connected),
+            // then the built-in mic (keeps Bluetooth earbuds out of low-quality call mode), then
+            // anything else. Never the system default: that is our own virtual mic.
+            let saved = UserDefaults.standard.string(forKey: Self.savedInputDeviceKey)
+            if let saved, devs.contains(where: { $0.uniqueID == saved }) {
+                self.selectedInputDeviceID = saved
+            } else if let builtIn = devs.first(where: { $0.deviceType == .builtInMicrophone }) {
+                self.selectedInputDeviceID = builtIn.uniqueID
             } else if let first = devs.first {
                 self.selectedInputDeviceID = first.uniqueID
             } else {

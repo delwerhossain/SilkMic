@@ -1,4 +1,5 @@
 import Foundation
+// Modified by Delwer Hossain, 2026 (SilkMic): device names/UIDs, remembered source mic.
 
 /// Pure, headless-testable routing/filtering logic for the NoNoise Mic virtual driver (the OUTGOING
 /// mic path). Operates on plain values (no CoreAudio) so it runs under `swift test`.
@@ -8,10 +9,14 @@ import Foundation
 /// contract table). A mismatch fails SILENTLY.
 public enum VirtualMicRouting {
     // Shared contract — keep identical to the driver's constants.
-    public static let visibleDeviceName = "NoNoise Mic"
-    public static let engineDeviceName  = "NoNoise Mic Engine"
-    public static let visibleDeviceUID  = "NoNoiseMic:visible:48k2ch"
-    public static let engineDeviceUID   = "NoNoiseMic:engine:48k2ch"
+    // SilkMic: renamed driver devices (Driver/SilkMicDriver).
+    public static let visibleDeviceName = "SilkMic"
+    public static let engineDeviceName  = "SilkMic Engine"
+    public static let visibleDeviceUID  = "SilkMic:visible:48k2ch"
+    public static let engineDeviceUID   = "SilkMic:engine:48k2ch"
+    /// Other virtual mics that must never be used as a capture source (loop risk), e.g. a
+    /// NoNoise Mac install that is still present.
+    public static let otherVirtualMicNames: Set<String> = ["NoNoise Mic", "NoNoise Mic Engine"]
 
     /// Known virtual sinks we will auto-route to, in priority order. A physical
     /// output is NEVER a fallback (would play cleaned audio aloud, not feed a mic).
@@ -106,6 +111,6 @@ public enum VirtualMicRouting {
     /// Remove the virtual mic from a list of input device names (prevents a
     /// feedback loop if the user could otherwise select it as the capture source).
     public static func filterInputs(_ names: [String]) -> [String] {
-        names.filter { $0 != visibleDeviceName && $0 != engineDeviceName }
+        names.filter { $0 != visibleDeviceName && $0 != engineDeviceName && !otherVirtualMicNames.contains($0) }
     }
 }
