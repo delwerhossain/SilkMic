@@ -286,6 +286,7 @@ public class AudioModel: NSObject, ObservableObject, AVCaptureAudioDataOutputSam
     
     // Playback (Output)
     private let engine = AVAudioEngine()
+    private var recoveryObservers: [NSObjectProtocol] = []
     private var playbackSourceNode: AVAudioSourceNode! 
     private var outputNode: AVAudioOutputNode { engine.outputNode }
     private var mainMixer: AVAudioMixerNode { engine.mainMixerNode }
@@ -365,6 +366,7 @@ public class AudioModel: NSObject, ObservableObject, AVCaptureAudioDataOutputSam
         micDeviceID = deviceID(forUID: VirtualMicRouting.visibleDeviceUID)
         setupCaptureSession()
         setupPlaybackEngine()
+        installRecoveryObservers()
         resolveVirtualMicLifecycle()   // arm the in-use listener + sync initial state
         installHardwareDeviceListener()
         loadSettings()
@@ -887,6 +889,33 @@ public class AudioModel: NSObject, ObservableObject, AVCaptureAudioDataOutputSam
         }
     }
     
+    // MARK: - Recovery (SilkMic)
+
+    /// Bluetooth mics switch the headset into call mode when capture starts, which reconfigures the
+    /// audio hardware: AVAudioEngine stops on a configuration change and the capture session can
+    /// hit a runtime error. NoNoise never restarted either, so the virtual mic went silent.
+    private func installRecoveryObservers() {
+        let center = NotificationCenter.default
+        recoveryObservers.append(center.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main) { [weak self] _ in
+            self?.scheduleRecovery(reason: "playback engine configuration changed") { $0.setupPlaybackEngine() }
+        })
+        recoveryObservers.append(center.addObserver(forName: AVCaptureSession.runtimeErrorNotification, object: captureSession, queue: .main) { [weak self] note in
+            let err = note.userInfo?[AVCaptureSessionErrorKey] as? NSError
+            self?.scheduleRecovery(reason: "capture runtime error \(err?.code ?? 0)") { $0.setupCaptureSession() }
+        })
+        recoveryObservers.append(center.addObserver(forName: AVCaptureSession.interruptionEndedNotification, object: captureSession, queue: .main) { [weak self] _ in
+            self?.scheduleRecovery(reason: "capture interruption ended") { $0.setupCaptureSession() }
+        })
+    }
+
+    private func scheduleRecovery(reason: String, _ action: @escaping (AudioModel) -> Void) {
+        print("AudioModel: recovering after \(reason)")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+            guard let self else { return }
+            action(self)
+        }
+    }
+
     func checkPermissions() {
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
         case .authorized: permissionStatus = "Authorized"
