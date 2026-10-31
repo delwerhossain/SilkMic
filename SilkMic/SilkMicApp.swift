@@ -46,6 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 struct SilkMicApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var audioEngine: AudioEngine
+    @State private var voiceController: VoiceController
     @State private var accessibility: AccessibilityPermissionService
     @State private var mediaKeyStatus: MediaKeyStatus
     @State private var popupVisibility: PopupVisibilityService
@@ -98,7 +99,8 @@ struct SilkMicApp: App {
             mediaKeyStatus: mediaKeyStatus,
             popupVisibility: popupVisibility,
             hudController: hudController,
-            mediaKeyMonitor: mediaKeyMonitor
+            mediaKeyMonitor: mediaKeyMonitor,
+            voiceController: voiceController
         )
         .task {
             // Idempotent: subsequent task runs (popup re-open) are no-ops inside start().
@@ -117,6 +119,7 @@ struct SilkMicApp: App {
         let permission = AudioRecordingPermission()
         let engine = AudioEngine(permission: permission, settingsManager: settings, autoEQProfileManager: profileManager)
         _audioEngine = State(initialValue: engine)
+        _voiceController = State(initialValue: VoiceController(audioEngine: engine))
 
         // Media keys / HUD services — instantiated at app scope so the tap
         // and HUD panel outlive popup open/close cycles.

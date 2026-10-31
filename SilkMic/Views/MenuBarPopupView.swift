@@ -29,6 +29,8 @@ struct MenuBarPopupView: View {
     /// handled globally via `AccessibilityPermissionService.onTrustChanged`
     /// wired in `SilkMicApp.init`.
     let mediaKeyMonitor: MediaKeyMonitor
+    /// Clean Mic controls (nil in previews and tests).
+    var voiceController: VoiceController? = nil
 
     /// Memoized sorted output devices - only recomputed when device list or default changes
     @State private var sortedDevices: [AudioDevice] = []
@@ -107,6 +109,9 @@ struct MenuBarPopupView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+            if let voiceController {
+                VoiceCardView(voice: voiceController)
+            }
             HStack(alignment: .top) {
                 deviceTabsHeader
                 Spacer()

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5E1C0000000000000000A003 /* VoiceCore in Frameworks */ = {isa = PBXBuildFile; productRef = 5E1C0000000000000000A002 /* VoiceCore */; };
 		140F6FF7C7CD8F6C1D73121E /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 75DA616DEB24648C4BDE9092 /* KeyboardShortcuts */; };
 		7980FFE92F261AA200AF5F85 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 79SPARK012F0600000008D52 /* Sparkle */; };
 		7988AE522F1CC55900E6D086 /* silkMicIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 7988AE512F1CC55900E6D086 /* silkMicIcon.icon */; };
@@ -68,6 +69,7 @@
 				7980FFE92F261AA200AF5F85 /* Sparkle in Frameworks */,
 				79FLUID0012F0600000008D52 /* FluidMenuBarExtra in Frameworks */,
 				140F6FF7C7CD8F6C1D73121E /* KeyboardShortcuts in Frameworks */,
+				5E1C0000000000000000A003 /* VoiceCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -143,6 +145,7 @@
 				79FLUID0022F0600000008D52 /* FluidMenuBarExtra */,
 				79SPARK012F0600000008D52 /* Sparkle */,
 				75DA616DEB24648C4BDE9092 /* KeyboardShortcuts */,
+				5E1C0000000000000000A002 /* VoiceCore */,
 			);
 			productName = SilkMic;
 			productReference = 79A607AF2F05C9E00008D52A /* SilkMic.app */;
@@ -231,6 +234,7 @@
 				79FLUID0002F0600000008D52 /* XCRemoteSwiftPackageReference "FluidMenuBarExtra" */,
 				79SPARK002F0600000008D52 /* XCRemoteSwiftPackageReference "Sparkle" */,
 				25AD8733711702DDEA8EAD12 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
+				5E1C0000000000000000A001 /* XCLocalSwiftPackageReference "Packages/VoiceCore" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 79A607B02F05C9E00008D52A /* Products */;
@@ -626,6 +630,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		5E1C0000000000000000A001 /* XCLocalSwiftPackageReference "Packages/VoiceCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/VoiceCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		25AD8733711702DDEA8EAD12 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -662,6 +673,10 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		5E1C0000000000000000A002 /* VoiceCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VoiceCore;
+		};
 		75DA616DEB24648C4BDE9092 /* KeyboardShortcuts */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 25AD8733711702DDEA8EAD12 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
