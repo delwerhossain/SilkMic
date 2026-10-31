@@ -48,6 +48,7 @@ struct SilkMicApp: App {
     @State private var audioEngine: AudioEngine
     @State private var voiceController: VoiceController
     @State private var notchController: NotchController
+    @State private var deviceAlertNotifier: DeviceAlertNotifier
     @State private var accessibility: AccessibilityPermissionService
     @State private var mediaKeyStatus: MediaKeyStatus
     @State private var popupVisibility: PopupVisibilityService
@@ -123,6 +124,9 @@ struct SilkMicApp: App {
         let voice = VoiceController(audioEngine: engine)
         _voiceController = State(initialValue: voice)
         _notchController = State(initialValue: NotchController(voice: voice))
+        _deviceAlertNotifier = State(initialValue: DeviceAlertNotifier { [weak settings] in
+            settings?.appSettings.showDeviceDisconnectAlerts ?? true
+        })
 
         // Media keys / HUD services — instantiated at app scope so the tap
         // and HUD panel outlive popup open/close cycles.
@@ -248,11 +252,11 @@ struct SilkMicApp: App {
         UNUserNotificationCenter.current().delegate = _appDelegate.wrappedValue
 
         // Request notification authorization (for device disconnect alerts)
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert]) { granted, error in
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
             if let error {
                 logger.error("Notification authorization error: \(error.localizedDescription)")
             }
-            // If not granted, notifications will silently not appear - acceptable behavior
+            logger.info("Notification permission granted: \(granted)")
         }
 
         // Flush debounced settings + tear down the CGEventTap before dealloc.
