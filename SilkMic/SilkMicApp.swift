@@ -49,6 +49,7 @@ struct SilkMicApp: App {
     @State private var voiceController: VoiceController
     @State private var notchController: NotchController
     @State private var deviceAlertNotifier: DeviceAlertNotifier
+    @State private var dictationController = DictationController()
     @State private var accessibility: AccessibilityPermissionService
     @State private var mediaKeyStatus: MediaKeyStatus
     @State private var popupVisibility: PopupVisibilityService

@@ -20,7 +20,9 @@
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>SilkMic uses Bluetooth to connect paired audio devices from the menu bar.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>SilkMic needs microphone access to capture audio from apps using input-capable devices.</string>
+	<string>SilkMic cleans your microphone for every app and listens while you dictate. Audio stays on this Mac.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>SilkMic turns your speech into text on this Mac when you use dictation.</string>
 	<key>SUEnableInstallerLauncherService</key>
 	<true/>
 	<key>SUFeedURL</key>

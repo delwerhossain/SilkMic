@@ -13,6 +13,7 @@ struct ShortcutsTab: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
+                dictationSection
                 volumeSection
                 mediaKeysSection
                 hotkeysSection
@@ -24,6 +25,26 @@ struct ShortcutsTab: View {
         .scrollIndicators(.never)
         .onChange(of: settings.appSettings.mediaKeyControlEnabled) { _, _ in
             mediaKeyMonitor.reconcile()
+        }
+    }
+
+    // MARK: - Dictation
+
+    private var dictationSection: some View {
+        SettingsSection("Dictation") {
+            SettingsRow(
+                "Dictate in English",
+                description: "Hold to talk, release to type. Tap once for hands-free, tap again to stop."
+            ) {
+                KeyboardShortcuts.Recorder(for: .dictateEnglish)
+            }
+            SettingsRowDivider()
+            SettingsRow(
+                "Dictate in Bangla",
+                description: "Same as English, in Bangla (written in Latin letters, e.g. \"ami ajke office jacchi\")."
+            ) {
+                KeyboardShortcuts.Recorder(for: .dictateBangla)
+            }
         }
     }
 
