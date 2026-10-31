@@ -10,6 +10,12 @@ private let logger = Logger(subsystem: "app.silkmic.SilkMic", category: "App")
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     var audioEngine: AudioEngine?
+    /// Keeps the SilkMic virtual mic usable only while this app runs (see VirtualMicKeepalive).
+    let virtualMicKeepalive = VirtualMicKeepalive()
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        virtualMicKeepalive.start()
+    }
 
     func application(_ application: NSApplication, open urls: [URL]) {
         guard let audioEngine = audioEngine else {
