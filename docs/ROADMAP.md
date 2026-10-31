@@ -17,12 +17,12 @@ Legend: ☐ todo · ◐ in progress · ☑ done
 | ID | Task | Done when | Deps |
 |---|---|---|---|
 | 1.1 ☑ | Fork FineTune into this repo (history kept), add `upstream-finetune` and `upstream-nonoise` remotes | `git log` shows FineTune history; both remotes fetch | – |
-| 1.2 ◐ | Build upstream FineTune unchanged on this Mac | Debug build succeeded 2026-11-01 (Xcode 27.1, unsigned); launch not yet tested | 1.1 |
-| 1.0 | Choose name (`docs/NAMING.md`): domain, social handles, trademark search | Name fixed in all docs | – |
-| 1.3 | Rename targets, bundle IDs, product name, settings folder; replace Sparkle `SUFeedURL` + `SUPublicEDKey` with our own | App builds and runs under the new name; no "FineTune" in UI strings (upstream file headers kept); our own feed and key in `Info.plist` | 1.2, 1.0 |
-| 1.4 | Import NoNoise `Driver/` with new bundle ID, device names and UIDs; add keepalive (TRD §3.4); run its C tests | Driver tests pass; driver installs and shows "SilkMic Mic"; killing the app hides the mic within 10 s | 1.1 |
-| 1.5 | Create `Packages/VoiceCore` from NoNoise Core (DFN3, VoiceChain, presets, file denoiser) | Package builds; NoNoise DSP tests pass | 1.1 |
-| 1.6 | `NOTICE`, LICENSE (GPL-3.0), in-app Acknowledgements, About screen notices, "Modified by" headers | PRD §10 licence checklist complete | 1.1 |
+| 1.2 ☑ | Build upstream FineTune unchanged on this Mac | Debug build succeeded 2026-11-01 (Xcode 27.1, unsigned) | 1.1 |
+| 1.0 ☑ | Choose name (`docs/NAMING.md`): domain, social handles, trademark search | Name fixed in all docs | – |
+| 1.3 ◐ | Rename targets, bundle IDs, product name, settings folder; replace Sparkle `SUFeedURL` + `SUPublicEDKey` with our own | App builds and runs under the new name; no "FineTune" in UI strings (upstream file headers kept); our own feed and key in `Info.plist` | 1.2, 1.0 |
+| 1.4 ◐ | Import NoNoise `Driver/` with new bundle ID, device names and UIDs; add keepalive (TRD §3.4); run its C tests | Driver tests pass; driver installs and shows "SilkMic Mic"; killing the app hides the mic within 10 s | 1.1 |
+| 1.5 ☑ | Create `Packages/VoiceCore` from NoNoise Core (DFN3, VoiceChain, presets, file denoiser) | Package builds; NoNoise DSP tests pass | 1.1 |
+| 1.6 ◐ | `NOTICE`, LICENSE (GPL-3.0), in-app Acknowledgements, About screen notices, "Modified by" headers | PRD §10 licence checklist complete | 1.1 |
 | 1.7 | Stable self-signed signing certificate + build script | Rebuilt app keeps mic permission | 1.3 |
 | 1.8 | Key custody: offline backup of EdDSA key and signing cert; CI secrets | Restore tested on a clean keychain | 1.7 |
 | 1.9 | CI on PRs: build, unit tests, driver C tests, DSP golden tests | Green CI on a test PR | 1.4, 1.5 |
@@ -107,3 +107,7 @@ Phase 0 → 1.1–1.2 → 1.0 naming → 1.3–1.11 (1.10 spikes decide go/no-go
 - **Done means verified:** build passes, tests pass, and the task's done-check in this file is met; otherwise the task stays ◐ with a note.
 - **Commits:** small, one topic each, as delwerhossain (see `git-commit` skill); work on `main-app`, push to `delwerhossain/SilkMic`.
 - **Owner checkpoints:** admin password, permission prompts, logo choice, hardware tests (QCY, WhatsApp) — batched and asked together.
+
+## Progress log
+
+- 2026-11-01: Phase 0 done (owner's voice test pending). Repo `delwerhossain/SilkMic` created. 1.3 rename done (966 app tests pass) — remaining: own Sparkle EdDSA key (needs owner keychain, 1.8). 1.4 driver imported, renamed, new factory UUID, C tests pass, builds — remaining: keepalive, install test (owner password). 1.5 VoiceCore package, 240 tests pass. 1.6 README + NOTICE done — remaining: in-app Acknowledgements and About notices.
