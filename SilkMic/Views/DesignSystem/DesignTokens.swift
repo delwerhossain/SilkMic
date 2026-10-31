@@ -23,6 +23,36 @@ enum DesignTokens {
         })
     }
 
+    // MARK: - Brand (SilkMic)
+
+    /// SilkMic brand palette and voice-state colours. Source of truth: design/logo/BRAND.md.
+    /// `Colors.accentPrimary` (the asset AccentColor) is Silk Violet, lifted for dark mode.
+    enum Brand {
+        static let silkViolet = Color(red: 110 / 255, green: 86 / 255, blue: 207 / 255)   // #6E56CF
+        static let lavender = Color(red: 185 / 255, green: 169 / 255, blue: 255 / 255)    // #B9A9FF
+        static let deepViolet = Color(red: 62 / 255, green: 44 / 255, blue: 143 / 255)    // #3E2C8F
+        static let graphite = Color(red: 23 / 255, green: 21 / 255, blue: 31 / 255)       // #17151F
+
+        /// Symbol / highlight colour that reads on the current appearance.
+        static let mark = dynamicColor(
+            name: "silkmic.brand.mark",
+            light: NSColor(srgbRed: 110 / 255, green: 86 / 255, blue: 207 / 255, alpha: 1),
+            dark: NSColor(srgbRed: 185 / 255, green: 169 / 255, blue: 255 / 255, alpha: 1)
+        )
+    }
+
+    /// Colours for the voice states shown in the menu bar, HUD and voice card.
+    enum VoiceState {
+        /// Clean Mic on
+        static let clean: Color = .accentColor
+        /// Clean Mic off (bypass) — neutral, never alarming
+        static let bypass: Color = .secondary
+        /// Mic muted everywhere
+        static let muted = Color(nsColor: .systemRed)
+        /// Something needs attention (no mic, driver missing, app on raw mic)
+        static let problem = Color(nsColor: .systemOrange)
+    }
+
     // MARK: - Colors
 
     enum Colors {
@@ -342,6 +372,15 @@ enum DesignTokens {
 
         /// Settings row description (11pt regular, tertiary)
         static let rowDescription = Font.system(size: 11, weight: .regular)
+
+        /// Voice card state label ("Clean", "Muted") — SF Pro Rounded per docs/DESIGN.md
+        static let voiceState = Font.system(size: 15, weight: .semibold, design: .rounded)
+
+        /// Voice card numbers (level, dB) — rounded and monospaced digits
+        static let voiceNumber = Font.system(size: 22, weight: .semibold, design: .rounded).monospacedDigit()
+
+        /// Strength chip label (Light / Balanced / Strong / Max / Auto)
+        static let strengthChip = Font.system(size: 11, weight: .medium, design: .rounded)
     }
 
     // MARK: - Spacing (standard 1× multiplier)
