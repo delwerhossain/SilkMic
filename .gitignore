@@ -36,3 +36,6 @@ scripts/spikes/
 
 # Brainstorming session artifacts
 .superpowers/
+
+# Local renders
+design/logo/renders/

@@ -554,11 +554,12 @@ struct MenuBarPopupView: View {
                 ForEach(sortedInputDevices) { device in
                     InputDeviceRow(
                         device: device,
-                        isDefault: device.id == deviceVolumeMonitor.defaultInputDeviceID,
+                        isDefault: voiceController.map { $0.selectedSourceMicID == device.uid }
+                            ?? (device.id == deviceVolumeMonitor.defaultInputDeviceID),
                         volume: deviceVolumeMonitor.inputVolumes[device.id] ?? 1.0,
                         isMuted: deviceVolumeMonitor.inputMuteStates[device.id] ?? false,
                         onSetDefault: {
-                            audioEngine.setLockedInputDevice(device)
+                            selectInputDevice(device)
                         },
                         onVolumeChange: { volume in
                             deviceVolumeMonitor.setInputVolume(for: device.id, to: volume)
@@ -1139,6 +1140,15 @@ struct MenuBarPopupView: View {
 
     // MARK: - Helpers
 
+    /// With Clean Mic, choosing a mic sets SilkMic's source mic; otherwise it sets the default input.
+    private func selectInputDevice(_ device: AudioDevice) {
+        if let voiceController {
+            voiceController.selectSourceMic(uid: device.uid)
+        } else {
+            audioEngine.setLockedInputDevice(device)
+        }
+    }
+
     /// Recomputes sorted output devices, filtering hidden ones.
     /// The current default output device is always kept visible even if hidden.
     /// Falls back to the unfiltered list if the filter produces an empty
@@ -1148,7 +1158,8 @@ struct MenuBarPopupView: View {
         let all = audioEngine.prioritySortedOutputDevices
         let defaultUID = deviceVolumeMonitor.defaultDeviceUID
         let filtered = all.filter { device in
-            device.uid == defaultUID || !audioEngine.settingsManager.isOutputDeviceHidden(device.uid)
+            !SilkMicDeviceFilter.isHelperAggregate(name: device.name)
+                && (device.uid == defaultUID || !audioEngine.settingsManager.isOutputDeviceHidden(device.uid))
         }
         sortedDevices = filtered.isEmpty ? all : filtered
     }
@@ -1159,10 +1170,15 @@ struct MenuBarPopupView: View {
     private func updateSortedInputDevices() {
         let all = audioEngine.prioritySortedInputDevices
         let defaultUID = deviceVolumeMonitor.defaultInputDeviceUID
+        // With Clean Mic the list shows real microphones only: picking one sets SilkMic's source
+        // mic (the system default stays on the SilkMic virtual mic).
+        let showsSourceMics = voiceController != nil
         let filtered = all.filter { device in
-            device.uid == defaultUID || !audioEngine.settingsManager.isInputDeviceHidden(device.uid)
+            if SilkMicDeviceFilter.isHelperAggregate(name: device.name) { return false }
+            if showsSourceMics { return !SilkMicDeviceFilter.isVirtualMic(uid: device.uid, name: device.name) }
+            return device.uid == defaultUID || !audioEngine.settingsManager.isInputDeviceHidden(device.uid)
         }
-        sortedInputDevices = filtered.isEmpty ? all : filtered
+        sortedInputDevices = filtered.isEmpty && !showsSourceMics ? all : filtered
     }
 
     /// Opens a file panel to import a ParametricEQ.txt for a device
@@ -1422,7 +1438,7 @@ struct MenuBarPopupView: View {
                 guard let device = sortedInputDevices.first(where: { $0.uid == uid }) else {
                     return .ignored
                 }
-                audioEngine.setLockedInputDevice(device)
+                selectInputDevice(device)
             } else {
                 guard let device = sortedDevices.first(where: { $0.uid == uid }) else {
                     return .ignored

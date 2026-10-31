@@ -1,5 +1,6 @@
 // SilkMic/Voice/VoiceController.swift
 import AVFoundation
+import Combine
 import CoreAudio
 import Foundation
 import Observation
@@ -69,14 +70,25 @@ final class VoiceController {
         }
     }
 
-    /// Physical mics SilkMic can clean (own and other virtual mics excluded).
-    var sourceMics: [(id: String, name: String)] {
-        model.inputDevices.map { ($0.uniqueID, $0.localizedName) }
-    }
+    /// Physical mics SilkMic can clean (own and other virtual mics excluded). Mirrored from the
+    /// engine's published list so SwiftUI views update.
+    private(set) var sourceMics: [(id: String, name: String)] = []
 
-    var selectedSourceMicID: String {
-        get { model.selectedInputDeviceID }
-        set { model.selectedInputDeviceID = newValue }
+    /// The mic SilkMic is cleaning right now (Core Audio device UID).
+    var selectedSourceMicID: String = "" {
+        didSet {
+            if model.selectedInputDeviceID != selectedSourceMicID { model.selectedInputDeviceID = selectedSourceMicID }
+        }
+    }
+    @ObservationIgnored private var cancellables: Set<AnyCancellable> = []
+
+    /// Picks the physical mic SilkMic cleans. Ignored if it is not a usable source mic.
+    func selectSourceMic(uid: String) {
+        guard model.inputDevices.contains(where: { $0.uniqueID == uid }) else {
+            logger.info("Ignoring source mic that is not available for capture: \(uid, privacy: .public)")
+            return
+        }
+        selectedSourceMicID = uid
     }
 
     init(audioEngine: AudioEngine) {
@@ -87,6 +99,17 @@ final class VoiceController {
         self.audioEngine = audioEngine
         model.isAIEnabled = cleanEnabled
         applyStrength()
+        model.$inputDevices
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] devices in self?.sourceMics = devices.map { ($0.uniqueID, $0.localizedName) } }
+            .store(in: &cancellables)
+        model.$selectedInputDeviceID
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] id in
+                guard let self, self.selectedSourceMicID != id else { return }
+                self.selectedSourceMicID = id
+            }
+            .store(in: &cancellables)
         installDeviceListener()
         lockDefaultInputToVirtualMic()
         // The driver publishes the mic only after the first keepalive; retry briefly after launch.
