@@ -402,8 +402,14 @@ struct MenuBarPopupView: View {
 
     /// Name of the current default input device
     private var defaultInputDeviceName: String {
+        // With Clean Mic the default input is the SilkMic virtual mic (hidden from the list), so
+        // show the mic actually being cleaned.
+        if let voiceController,
+           let source = sortedInputDevices.first(where: { $0.uid == voiceController.selectedSourceMicID }) {
+            return source.name
+        }
         guard let uid = deviceVolumeMonitor.defaultInputDeviceUID,
-              let device = sortedInputDevices.first(where: { $0.uid == uid }) else {
+              let device = audioEngine.deviceMonitor.inputDevice(for: uid) else {
             return "No Input"
         }
         return device.name
