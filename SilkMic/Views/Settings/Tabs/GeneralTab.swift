@@ -7,6 +7,7 @@ struct GeneralTab: View {
     let onResetAll: () -> Void
 
     @State private var showResetConfirmation = false
+    @AppStorage(NotchController.enabledKey) private var notchPanelEnabled = true
 
     var body: some View {
         ScrollView {
@@ -74,6 +75,16 @@ struct GeneralTab: View {
                 description: "How SilkMic appears in your menu bar"
             ) {
                 IconStyleSegmentedControl(selection: $settings.appSettings.menuBarIconStyle)
+            }
+            SettingsRowDivider()
+            SettingsRow(
+                "Open from the Notch",
+                description: "Hover or click the MacBook notch to open Clean Mic (notched Macs only)"
+            ) {
+                Toggle("", isOn: $notchPanelEnabled)
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .labelsHidden()
             }
             SettingsRowDivider()
             SettingsRow(

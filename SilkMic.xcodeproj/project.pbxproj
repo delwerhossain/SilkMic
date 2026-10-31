@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5E1C0000000000000000B003 /* DynamicNotchKit in Frameworks */ = {isa = PBXBuildFile; productRef = 5E1C0000000000000000B002 /* DynamicNotchKit */; };
 		5E1C0000000000000000A003 /* VoiceCore in Frameworks */ = {isa = PBXBuildFile; productRef = 5E1C0000000000000000A002 /* VoiceCore */; };
 		140F6FF7C7CD8F6C1D73121E /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 75DA616DEB24648C4BDE9092 /* KeyboardShortcuts */; };
 		7980FFE92F261AA200AF5F85 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 79SPARK012F0600000008D52 /* Sparkle */; };
@@ -70,6 +71,7 @@
 				79FLUID0012F0600000008D52 /* FluidMenuBarExtra in Frameworks */,
 				140F6FF7C7CD8F6C1D73121E /* KeyboardShortcuts in Frameworks */,
 				5E1C0000000000000000A003 /* VoiceCore in Frameworks */,
+				5E1C0000000000000000B003 /* DynamicNotchKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -146,6 +148,7 @@
 				79SPARK012F0600000008D52 /* Sparkle */,
 				75DA616DEB24648C4BDE9092 /* KeyboardShortcuts */,
 				5E1C0000000000000000A002 /* VoiceCore */,
+				5E1C0000000000000000B002 /* DynamicNotchKit */,
 			);
 			productName = SilkMic;
 			productReference = 79A607AF2F05C9E00008D52A /* SilkMic.app */;
@@ -235,6 +238,7 @@
 				79SPARK002F0600000008D52 /* XCRemoteSwiftPackageReference "Sparkle" */,
 				25AD8733711702DDEA8EAD12 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
 				5E1C0000000000000000A001 /* XCLocalSwiftPackageReference "Packages/VoiceCore" */,
+				5E1C0000000000000000B001 /* XCRemoteSwiftPackageReference "DynamicNotchKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 79A607B02F05C9E00008D52A /* Products */;
@@ -638,6 +642,14 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		5E1C0000000000000000B001 /* XCRemoteSwiftPackageReference "DynamicNotchKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/MrKai77/DynamicNotchKit";
+			requirement = {
+				kind = exactVersion;
+				version = 1.1.0;
+			};
+		};
 		25AD8733711702DDEA8EAD12 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sindresorhus/KeyboardShortcuts";
@@ -673,6 +685,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		5E1C0000000000000000B002 /* DynamicNotchKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5E1C0000000000000000B001 /* XCRemoteSwiftPackageReference "DynamicNotchKit" */;
+			productName = DynamicNotchKit;
+		};
 		5E1C0000000000000000A002 /* VoiceCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = VoiceCore;

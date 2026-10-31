@@ -47,6 +47,7 @@ struct SilkMicApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var audioEngine: AudioEngine
     @State private var voiceController: VoiceController
+    @State private var notchController: NotchController
     @State private var accessibility: AccessibilityPermissionService
     @State private var mediaKeyStatus: MediaKeyStatus
     @State private var popupVisibility: PopupVisibilityService
@@ -119,7 +120,9 @@ struct SilkMicApp: App {
         let permission = AudioRecordingPermission()
         let engine = AudioEngine(permission: permission, settingsManager: settings, autoEQProfileManager: profileManager)
         _audioEngine = State(initialValue: engine)
-        _voiceController = State(initialValue: VoiceController(audioEngine: engine))
+        let voice = VoiceController(audioEngine: engine)
+        _voiceController = State(initialValue: voice)
+        _notchController = State(initialValue: NotchController(voice: voice))
 
         // Media keys / HUD services — instantiated at app scope so the tap
         // and HUD panel outlive popup open/close cycles.
