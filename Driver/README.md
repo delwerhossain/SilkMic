@@ -40,8 +40,10 @@ wraparound, zero-timestamp jumps, and the read-before-write / writer-stopped sil
 Installing restarts `coreaudiod`, so **all** audio drops for a moment.
 
 ## Keepalive (SilkMic)
-The visible mic is only alive while the SilkMic app writes the custom `'kpal'` property
-(any `UInt32`, every ~4 s; see `SilkMic/Voice/VirtualMicKeepalive.swift`). After 10 s without a
-write the driver reports `DeviceIsAlive = 0` and `CanBeDefault(System)Device = 0`, and notifies
-the HAL, so macOS falls back to a real microphone instead of every app recording silence.
+The SilkMic app writes the custom `'kpal'` property (a CFNumber; declared in
+`kAudioObjectPropertyCustomPropertyInfoList`) on the hidden **engine** device every ~4 s (see
+`SilkMic/Voice/VirtualMicKeepalive.swift`). While the keepalive is fresh the visible "SilkMic" mic
+is in the plug-in's device list; after 10 s without one the driver removes it and notifies the HAL,
+exactly like unplugging a USB mic, so macOS falls back to a real microphone instead of every app
+recording silence. (Changing `DeviceIsAlive`/`CanBeDefault` is not enough: the HAL caches them.)
 The window math is in `SilkMicDriver/sm_keepalive.h` and tested by `tests/test_sm_keepalive.c`.

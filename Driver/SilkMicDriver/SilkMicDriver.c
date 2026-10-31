@@ -48,7 +48,10 @@
 // sourceMode custom property. Use the char literal so the compiler computes the FourCharCode
 // (a hand-typed hex with a transposed digit fails SILENTLY and the A2 toggle never switches).
 #define kSourceModeSelector     ((AudioObjectPropertySelector)'srcm')   // == 0x7372636D
-// SilkMic keepalive: the app writes any UInt32 here every few seconds (visible mic only).
+// SilkMic keepalive: the app writes any CFPropertyList (a CFNumber) here every few seconds
+// on the hidden ENGINE device (always published, so the app can always find it). While the
+// keepalive is fresh the visible mic is published; otherwise it is unplugged from the device list. Declared in kAudioObjectPropertyCustomPropertyInfoList, as the HAL only
+// forwards custom properties it knows about, and custom data must be a CFString/CFPropertyList.
 #define kKeepaliveSelector      ((AudioObjectPropertySelector)'kpal')
 #define kKeepaliveTimeoutSec    10.0
 #define kKeepaliveCheckSec      2
@@ -89,7 +92,9 @@ static _Atomic uint32_t gSourceMode = 0;
 // Last keepalive from the SilkMic app (mach ticks; 0 = never) and the alive state we last
 // announced to the HAL, so a change can be notified exactly once.
 static _Atomic uint64_t gLastKeepalive = 0;
-static _Atomic bool     gAnnouncedAlive = false;
+// Whether the visible mic is currently in the plug-in's device list. Starts unpublished: the mic
+// only appears once the SilkMic app is running.
+static _Atomic bool     gMicPublished = false;
 static dispatch_source_t gKeepaliveTimer = NULL;
 
 #pragma mark - Helpers
@@ -144,17 +149,21 @@ static bool micAppAlive(void) {
     return sm_keepalive_is_alive(atomic_load(&gLastKeepalive), mach_absolute_time(), keepaliveTimeoutTicks());
 }
 
-// Tell the HAL when the visible mic flips between usable and not, so macOS re-evaluates the
-// default input (and apps on it fall back to a real mic) without waiting for a property read.
+// Plug or unplug the visible mic when the app's keepalive starts or stops. The HAL caches device
+// properties such as IsAlive/CanBeDefault, but it always honours device-list changes (like a USB
+// mic being unplugged): macOS then picks another default input and apps fall back to a real mic.
 static void AnnounceAliveIfChanged(void) {
     bool alive = micAppAlive();
-    if (atomic_exchange(&gAnnouncedAlive, alive) == alive) return;
-    AudioObjectPropertyAddress addrs[3] = {
-        { kAudioDevicePropertyDeviceIsAlive, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain },
-        { kAudioDevicePropertyDeviceCanBeDefaultDevice, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain },
-        { kAudioDevicePropertyDeviceCanBeDefaultSystemDevice, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain },
+    if (atomic_exchange(&gMicPublished, alive) == alive) return;
+    static const AudioObjectPropertyAddress addrs[2] = {
+        { kAudioPlugInPropertyDeviceList, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain },
+        { kAudioObjectPropertyOwnedObjects, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain },
     };
-    if (gHost && gHost->PropertiesChanged) gHost->PropertiesChanged(gHost, kObjectID_Device_Mic, 3, addrs);
+    // Notify off the caller's thread: the HAL ignores (or can deadlock on) PropertiesChanged issued
+    // synchronously from inside a property call such as SetPropertyData.
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+        if (gHost && gHost->PropertiesChanged) gHost->PropertiesChanged(gHost, kObjectID_PlugIn, 2, addrs);
+    });
 }
 
 #pragma mark - COM plumbing (forward decls)
@@ -300,7 +309,7 @@ static OSStatus SilkMicDriver_GetPropertyDataSize(AudioServerPlugInDriverRef inD
             case kAudioObjectPropertyManufacturer:
             case kAudioPlugInPropertyResourceBundle:    *outDataSize = sizeof(CFStringRef);   return noErr;
             case kAudioObjectPropertyOwnedObjects:
-            case kAudioPlugInPropertyDeviceList:        *outDataSize = 2 * sizeof(AudioObjectID); return noErr;
+            case kAudioPlugInPropertyDeviceList:        *outDataSize = (atomic_load(&gMicPublished) ? 2 : 1) * sizeof(AudioObjectID); return noErr;
             case kAudioPlugInPropertyTranslateUIDToDevice: *outDataSize = sizeof(AudioObjectID); return noErr;
             default: return kAudioHardwareUnknownPropertyError;
         }
@@ -335,7 +344,9 @@ static OSStatus SilkMicDriver_GetPropertyDataSize(AudioServerPlugInDriverRef inD
             case kAudioDevicePropertyPreferredChannelsForStereo:   *outDataSize = 2 * sizeof(UInt32); return noErr;
             default:
                 // sourceMode is advertised by the visible mic only (see GetPropertyData).
-                if ((sel == kSourceModeSelector || sel == kKeepaliveSelector) && isMicDevice(inObjectID)) { *outDataSize = sizeof(UInt32); return noErr; }
+                if (sel == kSourceModeSelector && isMicDevice(inObjectID)) { *outDataSize = sizeof(UInt32); return noErr; }
+                if (sel == kKeepaliveSelector && isEngineDevice(inObjectID)) { *outDataSize = sizeof(CFPropertyListRef); return noErr; }
+                if (sel == kAudioObjectPropertyCustomPropertyInfoList && isEngineDevice(inObjectID)) { *outDataSize = sizeof(AudioServerPlugInCustomPropertyInfo); return noErr; }
                 return kAudioHardwareUnknownPropertyError;
         }
     }
@@ -397,8 +408,9 @@ static OSStatus SilkMicDriver_GetPropertyData(AudioServerPlugInDriverRef inDrive
             case kAudioPlugInPropertyResourceBundle: PUT_CFSTRING(CFSTR(""));
             case kAudioObjectPropertyOwnedObjects:
             case kAudioPlugInPropertyDeviceList: {
-                AudioObjectID devs[2] = { kObjectID_Device_Mic, kObjectID_Device_Engine };
-                CLAMP_ARRAY(AudioObjectID, 2);
+                const bool published = atomic_load(&gMicPublished);
+                AudioObjectID devs[2] = { kObjectID_Device_Engine, kObjectID_Device_Mic };
+                CLAMP_ARRAY(AudioObjectID, published ? 2 : 1);
                 memcpy(outData, devs, _n * sizeof(AudioObjectID));
                 *outDataSize = _n * sizeof(AudioObjectID);
                 return noErr;
@@ -409,7 +421,7 @@ static OSStatus SilkMicDriver_GetPropertyData(AudioServerPlugInDriverRef inDrive
                 CFStringRef uid = *(const CFStringRef *)inQualifierData;
                 if (uid == NULL) return kAudioHardwareIllegalOperationError; // don't CFEqual a NULL qualifier
                 AudioObjectID match = kAudioObjectUnknown;
-                if (CFEqual(uid, kDeviceUID_Mic))         match = kObjectID_Device_Mic;
+                if (CFEqual(uid, kDeviceUID_Mic) && atomic_load(&gMicPublished)) match = kObjectID_Device_Mic;
                 else if (CFEqual(uid, kDeviceUID_Engine)) match = kObjectID_Device_Engine;
                 *(AudioObjectID *)outData = match;
                 *outDataSize = sizeof(AudioObjectID);
@@ -431,8 +443,7 @@ static OSStatus SilkMicDriver_GetPropertyData(AudioServerPlugInDriverRef inDrive
             case kAudioDevicePropertyModelUID:  PUT_CFSTRING(kModelUID);
             case kAudioDevicePropertyTransportType: PUT_SCALAR(UInt32, kAudioDeviceTransportTypeVirtual);
             case kAudioDevicePropertyClockDomain: PUT_SCALAR(UInt32, 0);
-            // The visible mic is only alive while the SilkMic app keeps it alive (see sm_keepalive.h).
-            case kAudioDevicePropertyDeviceIsAlive: PUT_SCALAR(UInt32, (UInt32)((!mic || micAppAlive()) ? 1 : 0));
+            case kAudioDevicePropertyDeviceIsAlive: PUT_SCALAR(UInt32, 1);
             case kAudioDevicePropertyDeviceIsRunning: {
                 if (inDataSize < sizeof(UInt32)) return kAudioHardwareBadPropertySizeError;
                 pthread_mutex_lock(&gStateMutex);
@@ -442,8 +453,8 @@ static OSStatus SilkMicDriver_GetPropertyData(AudioServerPlugInDriverRef inDrive
             }
             // The hidden engine must NEVER be auto-selected as a default device — only the
             // visible mic is input-eligible. (output scope for the engine returns 0.)
-            case kAudioDevicePropertyDeviceCanBeDefaultDevice:       PUT_SCALAR(UInt32, (UInt32)((mic && micAppAlive()) ? 1 : 0));
-            case kAudioDevicePropertyDeviceCanBeDefaultSystemDevice: PUT_SCALAR(UInt32, (UInt32)((mic && micAppAlive()) ? 1 : 0));
+            case kAudioDevicePropertyDeviceCanBeDefaultDevice:       PUT_SCALAR(UInt32, (UInt32)(mic ? 1 : 0));
+            case kAudioDevicePropertyDeviceCanBeDefaultSystemDevice: PUT_SCALAR(UInt32, (UInt32)(mic ? 1 : 0));
             case kAudioDevicePropertyLatency:       PUT_SCALAR(UInt32, 0);
             case kAudioDevicePropertySafetyOffset:  PUT_SCALAR(UInt32, 0);
             case kAudioDevicePropertyIsHidden:      PUT_SCALAR(UInt32, (UInt32)(mic ? 0 : 1));
@@ -484,8 +495,22 @@ static OSStatus SilkMicDriver_GetPropertyData(AudioServerPlugInDriverRef inDrive
                 if (sel == kSourceModeSelector && mic) {
                     PUT_SCALAR(UInt32, atomic_load(&gSourceMode));
                 }
-                if (sel == kKeepaliveSelector && mic) {
-                    PUT_SCALAR(UInt32, (UInt32)(micAppAlive() ? 1 : 0));
+                if (sel == kKeepaliveSelector && !mic) {
+                    if (inDataSize < sizeof(CFPropertyListRef)) return kAudioHardwareBadPropertySizeError;
+                    SInt32 aliveFlag = micAppAlive() ? 1 : 0;
+                    *(CFPropertyListRef *)outData = CFNumberCreate(NULL, kCFNumberSInt32Type, &aliveFlag); // caller releases
+                    *outDataSize = (UInt32)sizeof(CFPropertyListRef);
+                    return noErr;
+                }
+                if (sel == kAudioObjectPropertyCustomPropertyInfoList && !mic) {
+                    if (inDataSize < sizeof(AudioServerPlugInCustomPropertyInfo)) return kAudioHardwareBadPropertySizeError;
+                    AudioServerPlugInCustomPropertyInfo info = {
+                        kKeepaliveSelector, kAudioServerPlugInCustomPropertyDataTypeCFPropertyList,
+                        kAudioServerPlugInCustomPropertyDataTypeNone
+                    };
+                    *(AudioServerPlugInCustomPropertyInfo *)outData = info;
+                    *outDataSize = (UInt32)sizeof(AudioServerPlugInCustomPropertyInfo);
+                    return noErr;
                 }
                 return kAudioHardwareUnknownPropertyError;
         }
@@ -572,9 +597,9 @@ static OSStatus SilkMicDriver_SetPropertyData(AudioServerPlugInDriverRef inDrive
         return noErr;
     }
 
-    // Keepalive from the SilkMic app — visible mic only. The value is ignored; the write is the signal.
-    if (isMicDevice(inObjectID) && inAddress->mSelector == kKeepaliveSelector) {
-        if (inDataSize < sizeof(UInt32)) return kAudioHardwareBadPropertySizeError;
+    // Keepalive from the SilkMic app — engine device only. The value is ignored; the write is the signal.
+    if (isEngineDevice(inObjectID) && inAddress->mSelector == kKeepaliveSelector) {
+        if (inDataSize < sizeof(CFPropertyListRef)) return kAudioHardwareBadPropertySizeError;
         atomic_store(&gLastKeepalive, mach_absolute_time());
         AnnounceAliveIfChanged();
         return noErr;

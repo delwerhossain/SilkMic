@@ -11,10 +11,9 @@ sudo cp -R "$DRIVER" "$DEST/"
 sudo xattr -dr com.apple.quarantine "$DEST/SilkMicDriver.driver" 2>/dev/null || true
 sudo killall coreaudiod 2>/dev/null || true
 sleep 3
-if system_profiler SPAudioDataType 2>/dev/null | grep -q "SilkMic:"; then
-  echo "SilkMic virtual mic installed and visible."
+if [ -d "$DEST/SilkMicDriver.driver" ]; then
+  echo "SilkMic driver installed. The \"SilkMic\" mic appears while the SilkMic app is running."
 else
-  echo "SilkMic virtual mic did NOT appear. Check Console.app for coreaudiod plug-in errors"
-  echo "(common causes: bad CFPlugInFactories/CFPlugInTypes keys, invalid signature)."
+  echo "SilkMic driver did NOT install. Check Console.app for coreaudiod plug-in errors."
   exit 1
 fi

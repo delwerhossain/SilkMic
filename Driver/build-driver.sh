@@ -7,7 +7,7 @@ SRC="SilkMicDriver"
 rm -rf "$DRIVER"
 mkdir -p "$DRIVER/Contents/MacOS"
 cp "$SRC/Info.plist" "$DRIVER/Contents/Info.plist"
-clang -bundle -std=c11 -O2 -arch arm64 \
+clang -bundle -std=c11 -fblocks -O2 -arch arm64 \
   -framework CoreAudio -framework CoreFoundation -framework AudioToolbox \
   "$SRC/SilkMicDriver.c" "$SRC/nn_ring.c" "$SRC/nn_clock.c" \
   -o "$DRIVER/Contents/MacOS/SilkMicDriver"
