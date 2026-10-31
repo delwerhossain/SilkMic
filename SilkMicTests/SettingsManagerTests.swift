@@ -221,7 +221,7 @@ struct AppSettingsDefaultTests {
     @Test("Default AppSettings has expected values")
     func defaults() {
         let settings = AppSettings()
-        #expect(settings.launchAtLogin == false)
+        #expect(settings.launchAtLogin == true)  // SilkMic: on by default
         #expect(settings.menuBarIconStyle == .default)
         #expect(settings.defaultNewAppVolume == 1.0)
         #expect(settings.lockInputDevice == true)

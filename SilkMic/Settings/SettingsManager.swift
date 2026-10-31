@@ -24,7 +24,7 @@ struct IgnoredAppInfo: Codable, Equatable {
 
 nonisolated struct AppSettings: Codable, Equatable {
     // General
-    var launchAtLogin: Bool = false
+    var launchAtLogin: Bool = true  // SilkMic: Clean Mic should survive a restart by default
     var menuBarIconStyle: MenuBarIconStyle = .default
 
     // Audio
@@ -65,7 +65,7 @@ nonisolated struct AppSettings: Codable, Equatable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        launchAtLogin = try c.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? false
+        launchAtLogin = try c.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? true
         menuBarIconStyle = try c.decodeIfPresent(MenuBarIconStyle.self, forKey: .menuBarIconStyle) ?? .default
         defaultNewAppVolume = try c.decodeIfPresent(Float.self, forKey: .defaultNewAppVolume) ?? 1.0
         lockInputDevice = try c.decodeIfPresent(Bool.self, forKey: .lockInputDevice) ?? true
@@ -819,6 +819,14 @@ final class SettingsManager {
             }
         } catch {
             logger.error("Failed to set launch at login: \(error.localizedDescription)")
+        }
+    }
+
+    /// Registers the login item when the setting is on but the system has no record of it
+    /// (first launch, or the app was moved). Call once at startup.
+    func syncLaunchAtLogin() {
+        if settings.appSettings.launchAtLogin && SMAppService.mainApp.status != .enabled {
+            setLaunchAtLogin(true)
         }
     }
 
