@@ -1,0 +1,34 @@
+SilkMic
+Copyright (C) 2026 Delwer Hossain
+
+SilkMic is free software: you can redistribute it and/or modify it under the
+terms of the GNU General Public License version 3 (see LICENSE). It comes with
+NO WARRANTY, to the extent permitted by law.
+
+SilkMic is a modified version of FineTune. Modified by Delwer Hossain, 2026
+(renamed, rebranded, and extended with voice-cleaning features).
+
+-------------------------------------------------------------------------------
+Upstream projects
+-------------------------------------------------------------------------------
+
+FineTune — https://github.com/ronitsingh10/FineTune
+Copyright (C) 2026 Ronit Singh
+License: GNU General Public License v3.0
+
+NoNoise Mac — https://github.com/ivalsaraj/NoNoise-Mac
+Copyright (c) 2025 Ghostkwebb (original MetalVoice project)
+Copyright (c) 2026 ivalsaraj (NoNoise Mac)
+License: MIT (full text in Licenses/NoNoise-MIT.txt once imported)
+
+-------------------------------------------------------------------------------
+Third-party packages
+-------------------------------------------------------------------------------
+
+Sparkle — https://github.com/sparkle-project/Sparkle — MIT-style licence
+KeyboardShortcuts — https://github.com/sindresorhus/KeyboardShortcuts — MIT
+FluidMenuBarExtra — https://github.com/wadetregaskis/FluidMenuBarExtra — MIT
+swift-snapshot-testing (tests only) — https://github.com/pointfreeco/swift-snapshot-testing — MIT
+DeepFilterNet (model and reference code) — https://github.com/Rikorose/DeepFilterNet — MIT or Apache-2.0
+
+Full licence texts are shipped inside the app (Acknowledgements screen).
