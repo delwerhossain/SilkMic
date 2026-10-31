@@ -1,3 +1,4 @@
+import CoreAudio
 import Foundation
 // Modified by Delwer Hossain, 2026 (SilkMic): device names/UIDs, remembered source mic.
 
@@ -110,6 +111,38 @@ public enum VirtualMicRouting {
 
     /// Remove the virtual mic from a list of input device names (prevents a
     /// feedback loop if the user could otherwise select it as the capture source).
+    /// Name prefixes of helper aggregate devices that must never be offered as a microphone.
+    public static let helperAggregatePrefixes = ["CADefaultDeviceAggregate", "SilkMic-"]
+
+    /// True for a real microphone: not one of the helper aggregates and, when Core Audio knows the
+    /// device, not an aggregate or virtual transport.
+    public static func isPhysicalInput(uid: String, name: String) -> Bool {
+        if helperAggregatePrefixes.contains(where: { name.hasPrefix($0) }) { return false }
+        guard let transport = transportType(forUID: uid) else { return true }
+        return transport != kAudioDeviceTransportTypeAggregate && transport != kAudioDeviceTransportTypeVirtual
+    }
+
+    static func transportType(forUID uid: String) -> UInt32? {
+        var address = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyTranslateUIDToDevice,
+                                                 mScope: kAudioObjectPropertyScopeGlobal,
+                                                 mElement: kAudioObjectPropertyElementMain)
+        var cfUID = uid as CFString
+        var device = AudioObjectID(0)
+        var size = UInt32(MemoryLayout<AudioObjectID>.size)
+        let status = withUnsafeMutablePointer(to: &cfUID) {
+            AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address,
+                                       UInt32(MemoryLayout<CFString>.size), $0, &size, &device)
+        }
+        guard status == noErr, device != 0 else { return nil }
+        var transport: UInt32 = 0
+        var tSize = UInt32(MemoryLayout<UInt32>.size)
+        var tAddress = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyTransportType,
+                                                  mScope: kAudioObjectPropertyScopeGlobal,
+                                                  mElement: kAudioObjectPropertyElementMain)
+        guard AudioObjectGetPropertyData(device, &tAddress, 0, nil, &tSize, &transport) == noErr else { return nil }
+        return transport
+    }
+
     public static func filterInputs(_ names: [String]) -> [String] {
         names.filter { $0 != visibleDeviceName && $0 != engineDeviceName && !otherVirtualMicNames.contains($0) }
     }

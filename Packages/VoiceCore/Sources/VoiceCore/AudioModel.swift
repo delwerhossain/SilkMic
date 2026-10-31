@@ -903,15 +903,19 @@ public class AudioModel: NSObject, ObservableObject, AVCaptureAudioDataOutputSam
     
     func fetchInputDevices() {
         // AVCaptureDeviceDiscovery
-        let types: [AVCaptureDevice.DeviceType] = [.builtInMicrophone, .externalUnknown] // .externalUnknown covers USB mics usually
+        // SilkMic: `.microphone` + `.external` (macOS 14+) include Bluetooth headset mics, which the
+        // old built-in/externalUnknown pair missed.
+        let types: [AVCaptureDevice.DeviceType] = [.microphone, .external]
         let session = AVCaptureDevice.DiscoverySession(deviceTypes: types, mediaType: .audio, position: .unspecified)
-        // Note: AVCaptureDevice doesn't easily show "Loopback" devices like BlackHole.
-        // But for "Microphone" input, that is what we want.
-        
+
         var devs = session.devices
-        // Drop our own virtual mic from the capture list — selecting it as the source would feed
-        // the cleaned output back into the input (a loopback echo).
-        devs = devs.filter { VirtualMicRouting.filterInputs([$0.localizedName]).isEmpty == false }
+        // Only real microphones: drop our own and other virtual mics (selecting one as the source
+        // would feed cleaned output back into the input) and aggregate devices (system or tap
+        // helpers such as "CADefaultDeviceAggregate-…" or "SilkMic-1234").
+        devs = devs.filter {
+            VirtualMicRouting.filterInputs([$0.localizedName]).isEmpty == false
+                && VirtualMicRouting.isPhysicalInput(uid: $0.uniqueID, name: $0.localizedName)
+        }
         // Sort: Built-in first?
         devs.sort { $0.localizedName < $1.localizedName }
         
