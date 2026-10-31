@@ -96,7 +96,7 @@ struct AboutLinkChip: View {
             icon: "star",
             hoverIcon: "star.fill",
             hoverColor: .yellow,
-            url: URL(string: "https://github.com/ronitsingh10/SilkMic")!
+            url: DesignTokens.Links.repository
         )
     }
     .padding(24)

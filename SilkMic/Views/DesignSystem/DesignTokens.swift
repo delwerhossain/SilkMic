@@ -485,10 +485,17 @@ enum DesignTokens {
     // MARK: - Links
 
     enum Links {
-        /// Financial support page (currently Ko-fi, URL is platform-agnostic in UI)
-        static let support = URL(string: "https://ko-fi.com/ronitsingh10")!
+        /// SilkMic project page (used for the "support" footer link until a sponsor page exists)
+        static let support = URL(string: "https://github.com/delwerhossain/SilkMic")!
+
+        /// SilkMic source repository
+        static let repository = URL(string: "https://github.com/delwerhossain/SilkMic")!
 
         /// Project license on GitHub
-        static let license = URL(string: "https://github.com/ronitsingh10/SilkMic/blob/main/LICENSE")!
+        static let license = URL(string: "https://github.com/delwerhossain/SilkMic/blob/main/LICENSE")!
+
+        /// Upstream projects SilkMic is built on (credited in About and Acknowledgements)
+        static let fineTune = URL(string: "https://github.com/ronitsingh10/FineTune")!
+        static let noNoise = URL(string: "https://github.com/ivalsaraj/NoNoise-Mac")!
     }
 }

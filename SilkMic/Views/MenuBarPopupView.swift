@@ -350,11 +350,11 @@ struct MenuBarPopupView: View {
                 Button {
                     NSWorkspace.shared.open(DesignTokens.Links.support)
                 } label: {
-                    Label("Donate", systemImage: isSupportHovered ? "heart.fill" : "heart")
+                    Label("Star SilkMic", systemImage: isSupportHovered ? "star.fill" : "star")
                 }
                 .buttonStyle(.plain)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(isSupportHovered ? Color(nsColor: .systemPink) : DesignTokens.Colors.textTertiary)
+                .foregroundStyle(isSupportHovered ? Color(nsColor: .systemYellow) : DesignTokens.Colors.textTertiary)
                 .onHover { hovering in
                     withAnimation(DesignTokens.Animation.hover) {
                         isSupportHovered = hovering
