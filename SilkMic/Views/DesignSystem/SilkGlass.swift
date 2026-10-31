@@ -75,7 +75,7 @@ extension View {
     }
 
     /// Popup / panel background: aurora glow under Liquid Glass (or the popover material before 26).
-    func silkPanelBackground(cornerRadius: CGFloat = 16) -> some View {
+    func silkPanelBackground(cornerRadius: CGFloat = 24) -> some View {
         modifier(SilkPanelBackgroundModifier(cornerRadius: cornerRadius))
     }
 }
@@ -116,10 +116,10 @@ private struct SilkPanelBackgroundModifier: ViewModifier {
         if reduceTransparency {
             content.background(Color(nsColor: .windowBackgroundColor))
         } else if #available(macOS 26.0, *) {
+            // Clear Liquid Glass like Control Center: no colour wash on the panel itself; colour
+            // only appears on active controls.
             content
-                .background(AuroraGlow(intensity: 0.9))
-                .background(GlassEffectBackground(cornerRadius: cornerRadius,
-                                                  tint: NSColor(SilkPalette.violet).withAlphaComponent(0.06)))
+                .background(GlassEffectBackground(cornerRadius: cornerRadius, tint: nil))
         } else {
             content
                 .background(Color.popupBackgroundOverlay)

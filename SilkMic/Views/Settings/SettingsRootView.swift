@@ -58,7 +58,7 @@ struct SettingsRootView: View {
                 .tag(Section.about)
         }
         .frame(width: 720, height: 560)
-        .background(AuroraGlow(intensity: 0.8))
+        .background(AuroraGlow(intensity: 0.35))
         .containerBackground(.ultraThinMaterial, for: .window)
         .tint(SilkPalette.violet)
         .preferredColorScheme(settings.appSettings.appearance.swiftUIColorScheme)
