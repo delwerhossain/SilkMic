@@ -1,4 +1,5 @@
 // SilkMic/Views/Settings/SettingsRootView.swift
+// Modified by Delwer Hossain, 2026: System Settings–style sidebar layout for SilkMic.
 import SwiftUI
 
 @MainActor
@@ -15,12 +16,66 @@ struct SettingsRootView: View {
     enum Section: String, Hashable, CaseIterable, Identifiable {
         case general, audio, shortcuts, updates, about
         var id: Self { self }
+
+        var title: String {
+            switch self {
+            case .general: return "General"
+            case .audio: return "Audio"
+            case .shortcuts: return "Shortcuts"
+            case .updates: return "Updates"
+            case .about: return "About"
+            }
+        }
+
+        var symbol: String {
+            switch self {
+            case .general: return "gearshape.fill"
+            case .audio: return "speaker.wave.2.fill"
+            case .shortcuts: return "command"
+            case .updates: return "arrow.triangle.2.circlepath"
+            case .about: return "info.circle.fill"
+            }
+        }
+
+        /// Icon tile colour, like the coloured squares in macOS System Settings.
+        var tileColor: Color {
+            switch self {
+            case .general: return Color(nsColor: .systemGray)
+            case .audio: return Color(nsColor: .systemPink)
+            case .shortcuts: return Color(nsColor: .systemBlue)
+            case .updates: return Color(nsColor: .systemGreen)
+            case .about: return SilkPalette.violet
+            }
+        }
     }
 
-    @State private var selection: Section = .general
+    @State private var selection: Section? = .general
 
     var body: some View {
-        TabView(selection: $selection) {
+        NavigationSplitView {
+            List(Section.allCases, selection: $selection) { section in
+                Label {
+                    Text(section.title)
+                } icon: {
+                    SettingsIconTile(symbol: section.symbol, color: section.tileColor)
+                }
+                .tag(section)
+            }
+            .navigationSplitViewColumnWidth(min: 190, ideal: 200, max: 240)
+        } detail: {
+            detail(for: selection ?? .general)
+                .navigationTitle((selection ?? .general).title)
+        }
+        .frame(width: 760, height: 560)
+        .preferredColorScheme(settings.appSettings.appearance.swiftUIColorScheme)
+        .background(WindowAppearanceBridge(appearance: settings.appSettings.appearance.nsAppearance))
+        .background(WindowTitleBridge(title: "SilkMic Settings"))
+    }
+
+    @ViewBuilder
+    private func detail(for section: Section) -> some View {
+        switch section {
+        case .general:
             GeneralTab(
                 settings: settings,
                 onResetAll: {
@@ -28,17 +83,13 @@ struct SettingsRootView: View {
                     deviceVolumeMonitor.setSystemFollowDefault()
                 }
             )
-            .tabItem { Label("General", systemImage: "gearshape") }
-            .tag(Section.general)
-
+        case .audio:
             AudioTab(
                 settings: settings,
                 audioEngine: audioEngine,
                 deviceVolumeMonitor: deviceVolumeMonitor
             )
-            .tabItem { Label("Audio", systemImage: "speaker.wave.2") }
-            .tag(Section.audio)
-
+        case .shortcuts:
             ShortcutsTab(
                 settings: settings,
                 accessibility: accessibility,
@@ -46,23 +97,24 @@ struct SettingsRootView: View {
                 mediaKeyMonitor: mediaKeyMonitor,
                 shortcutsRegistry: shortcutsRegistry
             )
-            .tabItem { Label("Shortcuts", systemImage: "command") }
-            .tag(Section.shortcuts)
-
+        case .updates:
             UpdatesTab(updateManager: updateManager)
-                .tabItem { Label("Updates", systemImage: "arrow.triangle.2.circlepath") }
-                .tag(Section.updates)
-
+        case .about:
             AboutTab()
-                .tabItem { Label("About", systemImage: "info.circle") }
-                .tag(Section.about)
         }
-        .frame(width: 720, height: 560)
-        .background(AuroraGlow(intensity: 0.35))
-        .containerBackground(.ultraThinMaterial, for: .window)
-        .tint(SilkPalette.violet)
-        .preferredColorScheme(settings.appSettings.appearance.swiftUIColorScheme)
-        .background(WindowAppearanceBridge(appearance: settings.appSettings.appearance.nsAppearance))
-        .background(WindowTitleBridge(title: "SilkMic Settings"))
+    }
+}
+
+/// Small rounded-square icon with a white symbol, as in macOS System Settings.
+struct SettingsIconTile: View {
+    let symbol: String
+    let color: Color
+
+    var body: some View {
+        Image(systemName: symbol)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: 20, height: 20)
+            .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(color.gradient))
     }
 }
