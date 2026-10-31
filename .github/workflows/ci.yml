@@ -26,8 +26,8 @@ jobs:
       - name: Build
         run: |
           xcodebuild build \
-            -project FineTune.xcodeproj \
-            -scheme FineTune \
+            -project SilkMic.xcodeproj \
+            -scheme SilkMic \
             -configuration Debug \
             CODE_SIGN_IDENTITY=- \
             CODE_SIGNING_REQUIRED=NO
@@ -35,10 +35,10 @@ jobs:
       - name: Test
         run: |
           xcodebuild test \
-            -project FineTune.xcodeproj \
-            -scheme FineTune \
+            -project SilkMic.xcodeproj \
+            -scheme SilkMic \
             -configuration Debug \
-            -skip-testing:FineTuneUITests \
+            -skip-testing:SilkMicUITests \
             CODE_SIGN_IDENTITY=- \
             CODE_SIGNING_REQUIRED=NO \
             -resultBundlePath build/TestResults.xcresult

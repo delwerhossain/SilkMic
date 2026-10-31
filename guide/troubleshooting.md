@@ -2,17 +2,17 @@
 
 ## No sound / audio stops working
 
-FineTune requires the **Screen & System Audio Recording** permission to capture and route app audio.
+SilkMic requires the **Screen & System Audio Recording** permission to capture and route app audio.
 
 1. Open **System Settings** → **Privacy & Security** → **Screen & System Audio Recording**
-2. Find FineTune in the list and enable it
-3. **Restart FineTune** — the permission doesn't take effect until relaunch
+2. Find SilkMic in the list and enable it
+3. **Restart SilkMic** — the permission doesn't take effect until relaunch
 
 If you previously denied the permission prompt, you'll need to enable it manually from System Settings.
 
 ## App not appearing
 
-FineTune only shows apps that are **actively playing audio**. If an app isn't visible:
+SilkMic only shows apps that are **actively playing audio**. If an app isn't visible:
 
 - Make sure the app is actually producing sound (start playback)
 - Check if the app is hidden. Open **edit mode** (pencil icon) and look for the eye icon next to the app name. A crossed-out eye means the app is being ignored.
@@ -35,19 +35,19 @@ There are two cases.
 
 **Per-app slider.** Some apps use helper processes to play audio rather than the main app process, so the slider you see might be controlling the wrong process. Try restarting the app. If the issue persists, check edit mode to see if the app appears as a different process name.
 
-**Per-device slider.** When you open a device, FineTune picks a volume backend automatically:
+**Per-device slider.** When you open a device, SilkMic picks a volume backend automatically:
 
 - **Hardware**: the device reports a native volume control (most USB DACs, AirPods, built-in speakers).
 - **DDC**: an external display that responds to the monitor-control protocol.
-- **Software**: FineTune attenuates inside its own audio graph.
+- **Software**: SilkMic attenuates inside its own audio graph.
 
-Auto-detection gets it right for most devices, but some USB DACs and HDMI/DisplayPort outputs advertise a hardware slider that doesn't actually move the output level. If the device slider doesn't change the volume, open the device inspector (the info button on the device row) and turn on **Software volume**. FineTune remembers the choice per device. The toggle is hidden when auto-detect already picked Software, because there's no alternative backend to switch to.
+Auto-detection gets it right for most devices, but some USB DACs and HDMI/DisplayPort outputs advertise a hardware slider that doesn't actually move the output level. If the device slider doesn't change the volume, open the device inspector (the info button on the device row) and turn on **Software volume**. SilkMic remembers the choice per device. The toggle is hidden when auto-detect already picked Software, because there's no alternative backend to switch to.
 
 ## Audio device not switching automatically
 
-FineTune uses a **device priority list** to decide which output device to use. When a device connects, FineTune only switches to it if it's ranked higher than the current device. When a device disconnects, FineTune falls back to the next highest-priority device that's still connected.
+SilkMic uses a **device priority list** to decide which output device to use. When a device connects, SilkMic only switches to it if it's ranked higher than the current device. When a device disconnects, SilkMic falls back to the next highest-priority device that's still connected.
 
-By default, devices are added to the bottom of the list in the order they're first seen. Since your Mac's built-in speakers are always connected, they end up at the top (highest priority), so FineTune won't auto-switch to headphones, external speakers, or other devices when they connect.
+By default, devices are added to the bottom of the list in the order they're first seen. Since your Mac's built-in speakers are always connected, they end up at the top (highest priority), so SilkMic won't auto-switch to headphones, external speakers, or other devices when they connect.
 
 **This is a one-time setup.** Once you set your preferred order, it's saved permanently and works across app restarts.
 
@@ -57,27 +57,27 @@ By default, devices are added to the bottom of the list in the order they're fir
 2. **Drag** devices to reorder, or **click the priority number** and type a new position
 3. Click the **checkmark** to exit edit mode — your order is saved
 
-The device at position 1 has the highest priority. FineTune will always prefer the highest-priority device that's currently connected.
+The device at position 1 has the highest priority. SilkMic will always prefer the highest-priority device that's currently connected.
 
 Input and output devices have **separate priority lists** — switch between them using the tabs in edit mode.
 
-> **Note:** For AirPods, taking them out of your ears and putting them back in (without the case) is handled by macOS Automatic Ear Detection. FineTune doesn't interfere with that.
+> **Note:** For AirPods, taking them out of your ears and putting them back in (without the case) is handled by macOS Automatic Ear Detection. SilkMic doesn't interfere with that.
 
 ## Input devices not showing
 
-FineTune's input device monitoring requires separate microphone permission.
+SilkMic's input device monitoring requires separate microphone permission.
 
 1. Open **System Settings** → **Privacy & Security** → **Microphone**
-2. Find FineTune and enable it
-3. Restart FineTune
+2. Find SilkMic and enable it
+3. Restart SilkMic
 
-## Media keys don't control FineTune
+## Media keys don't control SilkMic
 
-Media keys (F10 / F11 / F12) are opt-in and require the **Accessibility** permission so FineTune can observe the keystrokes.
+Media keys (F10 / F11 / F12) are opt-in and require the **Accessibility** permission so SilkMic can observe the keystrokes.
 
 1. Open **System Settings** → **Privacy & Security** → **Accessibility**
-2. Enable FineTune in the list. If it's already on, toggle it off and back on to clear a rare permission-bootstrap race.
-3. Open FineTune Settings → **Media Keys & HUD**, turn on **Control volume with media keys**, and pick a HUD style (Tahoe or Classic) or disable the HUD
+2. Enable SilkMic in the list. If it's already on, toggle it off and back on to clear a rare permission-bootstrap race.
+3. Open SilkMic Settings → **Media Keys & HUD**, turn on **Control volume with media keys**, and pick a HUD style (Tahoe or Classic) or disable the HUD
 
 If the keys still don't work right after launch, a WindowServer handoff can briefly swallow the first keypress. Try once more; subsequent presses are reliable.
 
@@ -98,4 +98,4 @@ If the keys still don't work right after launch, a WindowServer handoff can brie
 - Check if volume boost is set above 1x — high boost levels can cause clipping on loud passages
 - If using EQ, large boosts across multiple bands can push levels too high. Try pulling bands down instead of boosting others up.
 - AutoEQ profiles include a preamp gain reduction to prevent clipping; manual EQ does not, so be mindful of total gain
-- Try resetting the app to defaults: `open "finetune://reset"` in Terminal
+- Try resetting the app to defaults: `open "silkmic://reset"` in Terminal

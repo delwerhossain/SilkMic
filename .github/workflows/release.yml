@@ -73,11 +73,11 @@ jobs:
           echo "Setting version to $VERSION"
 
           # Update MARKETING_VERSION (e.g., 1.1.0)
-          sed -i '' "s/MARKETING_VERSION = [^;]*/MARKETING_VERSION = $VERSION/g" FineTune.xcodeproj/project.pbxproj
+          sed -i '' "s/MARKETING_VERSION = [^;]*/MARKETING_VERSION = $VERSION/g" SilkMic.xcodeproj/project.pbxproj
 
           # Update CURRENT_PROJECT_VERSION (build number) using run number for uniqueness
           BUILD_NUMBER=${{ github.run_number }}
-          sed -i '' "s/CURRENT_PROJECT_VERSION = [^;]*/CURRENT_PROJECT_VERSION = $BUILD_NUMBER/g" FineTune.xcodeproj/project.pbxproj
+          sed -i '' "s/CURRENT_PROJECT_VERSION = [^;]*/CURRENT_PROJECT_VERSION = $BUILD_NUMBER/g" SilkMic.xcodeproj/project.pbxproj
 
           echo "Version: $VERSION, Build: $BUILD_NUMBER"
 
@@ -85,29 +85,29 @@ jobs:
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          xcodebuild -project FineTune.xcodeproj \
-            -scheme FineTune \
+          xcodebuild -project SilkMic.xcodeproj \
+            -scheme SilkMic \
             -configuration Release \
-            -archivePath build/FineTune.xcarchive \
+            -archivePath build/SilkMic.xcarchive \
             archive \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID"
 
       - name: Export archive
         run: |
           xcodebuild -exportArchive \
-            -archivePath build/FineTune.xcarchive \
+            -archivePath build/SilkMic.xcarchive \
             -exportPath build/ \
             -exportOptionsPlist ExportOptions.plist
 
           # Verify the app is signed
-          codesign -dv --verbose=4 build/FineTune.app
+          codesign -dv --verbose=4 build/SilkMic.app
 
       - name: Create DMG
         run: |
           # create-dmg creates a nicely formatted DMG with Applications symlink
-          npx create-dmg build/FineTune.app build/ --overwrite || true
+          npx create-dmg build/SilkMic.app build/ --overwrite || true
 
-          DMG_NAME="FineTune.dmg"
+          DMG_NAME="SilkMic.dmg"
 
           # Find and rename the created DMG (create-dmg names it "AppName Version.dmg")
           mv build/*.dmg "build/${DMG_NAME}"
@@ -166,7 +166,7 @@ jobs:
           # Run generate_appcast to update appcast.xml with proper EdDSA signature
           sparkle_tools/bin/generate_appcast \
             --ed-key-file "$RUNNER_TEMP/sparkle_private_key" \
-            --download-url-prefix "https://github.com/ronitsingh10/FineTune/releases/download/v${VERSION}/" \
+            --download-url-prefix "https://github.com/delwerhossain/SilkMic/releases/download/v${VERSION}/" \
             -o appcast.xml \
             Release/
 
@@ -187,7 +187,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: build/FineTune.dmg
+          files: build/SilkMic.dmg
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}

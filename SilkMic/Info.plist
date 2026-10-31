@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>app.silkmic.SilkMic</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>silkmic</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSAudioCaptureUsageDescription</key>
+	<string>SilkMic needs access to control volume levels for individual applications.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>SilkMic uses Bluetooth to connect paired audio devices from the menu bar.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SilkMic needs microphone access to capture audio from apps using input-capable devices.</string>
+	<key>SUEnableInstallerLauncherService</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/delwerhossain/SilkMic/main/appcast.xml</string>
+</dict>
+</plist>

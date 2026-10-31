@@ -2,17 +2,17 @@
 
 **English** · [简体中文](autoeq.zh-CN.md)
 
-FineTune can apply headphone-specific frequency response corrections using profiles from the [AutoEQ](https://github.com/jaakkopasanen/AutoEq) project. This compensates for your headphones' natural frequency curve, giving you a flatter, more accurate sound.
+SilkMic can apply headphone-specific frequency response corrections using profiles from the [AutoEQ](https://github.com/jaakkopasanen/AutoEq) project. This compensates for your headphones' natural frequency curve, giving you a flatter, more accurate sound.
 
 ## How It Works
 
-Every pair of headphones colors the sound differently. Some boost bass, others are harsh in the treble. AutoEQ measures these deviations and generates corrective EQ filters. FineTune applies these filters per-device, so each pair of headphones gets its own correction profile.
+Every pair of headphones colors the sound differently. Some boost bass, others are harsh in the treble. AutoEQ measures these deviations and generates corrective EQ filters. SilkMic applies these filters per-device, so each pair of headphones gets its own correction profile.
 
-Corrections are applied on top of FineTune's 10-band EQ, so you can still tweak the sound to your taste after applying a profile.
+Corrections are applied on top of SilkMic's 10-band EQ, so you can still tweak the sound to your taste after applying a profile.
 
 ## Browse Built-in Profiles
 
-1. Click the **wand icon** next to any headphone device in FineTune
+1. Click the **wand icon** next to any headphone device in SilkMic
 2. Search for your headphone model by name
 3. Select a profile. It's applied immediately.
 
@@ -29,7 +29,7 @@ If you have a custom measurement or want to use a profile from another source:
 3. The profile is imported and applied to the selected device
 4. Use the **Correction** switch in the picker to A/B the profile without removing it
 
-FineTune accepts [EqualizerAPO](https://sourceforge.net/projects/equalizerapo/) ParametricEQ.txt files:
+SilkMic accepts [EqualizerAPO](https://sourceforge.net/projects/equalizerapo/) ParametricEQ.txt files:
 
 ```
 Preamp: -6.2 dB
@@ -50,8 +50,8 @@ Up to 10 filters per profile. The `Preamp` line sets a global gain offset to pre
 
 ## Where to Get Profiles
 
-- **Built-in search** — The easiest way. Thousands of headphones are available directly in FineTune.
-- **[autoeq.app](https://www.autoeq.app/)** — Web-based tool with more options. Select **EqualizerAPO ParametricEq** as the equalizer app, download the file, and import it into FineTune.
+- **Built-in search** — The easiest way. Thousands of headphones are available directly in SilkMic.
+- **[autoeq.app](https://www.autoeq.app/)** — Web-based tool with more options. Select **EqualizerAPO ParametricEq** as the equalizer app, download the file, and import it into SilkMic.
 - **[AutoEQ GitHub](https://github.com/jaakkopasanen/AutoEq)** — The full repository of measurements and generated profiles.
 - **Custom measurements** — If you've measured your headphones yourself (e.g., with a MiniDSP EARS or similar), you can create a ParametricEQ.txt file in any text editor following the format above.
 

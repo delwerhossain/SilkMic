@@ -1,22 +1,22 @@
-# Contributing to FineTune
+# Contributing to SilkMic
 
-Thank you for your interest in contributing to FineTune!
+Thank you for your interest in contributing to SilkMic!
 
 ## Building from Source
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/ronitsingh10/FineTune.git
-   cd FineTune
+   git clone https://github.com/delwerhossain/SilkMic.git
+   cd SilkMic
    ```
 
 2. Open in Xcode:
    ```bash
-   open FineTune.xcodeproj
+   open SilkMic.xcodeproj
    ```
 
 3. Set your development team in Xcode:
-   - Select the FineTune target
+   - Select the SilkMic target
    - Go to Signing & Capabilities
    - Select your team from the dropdown
 
