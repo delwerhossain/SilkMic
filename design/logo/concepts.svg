@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1600" height="840" viewBox="0 0 1600 840"><defs><filter id="grey"><feColorMatrix type="saturate" values="0"/></filter></defs><rect width="1600" height="840" fill="#f7f7f4"/><text x="60" y="78" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="40" font-weight="700" fill="#161616">Logo concepts</text><text x="60" y="116" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="20" fill="#6b6b6b">Concepts for review — pick a direction (or tell me what you like in each).</text><rect x="60" y="150" width="474.667" height="630" rx="18" fill="#fff" stroke="#e4e4e0" stroke-width="1"/><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="90" y="190" width="414.667" height="300" preserveAspectRatio="xMidYMid meet">
+  <!-- A v2: the S of SilkMic split into two sound arcs; the gap is the quiet the app creates -->
+  <path d="M184 78 C184 50 160 36 130 36 C96 36 76 56 76 82 C76 102 88 112 102 118" fill="none" stroke="#000" stroke-width="30" stroke-linecap="round"/>
+  <path d="M154 138 C168 144 180 152 180 174 C180 200 160 220 126 220 C96 220 72 206 72 178" fill="none" stroke="#000" stroke-width="30" stroke-linecap="round"/>
+</svg>
+</g><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="90" y="516" width="64" height="64" preserveAspectRatio="xMidYMid meet">
+  <!-- A v2: the S of SilkMic split into two sound arcs; the gap is the quiet the app creates -->
+  <path d="M184 78 C184 50 160 36 130 36 C96 36 76 56 76 82 C76 102 88 112 102 118" fill="none" stroke="#000" stroke-width="30" stroke-linecap="round"/>
+  <path d="M154 138 C168 144 180 152 180 174 C180 200 160 220 126 220 C96 220 72 206 72 178" fill="none" stroke="#000" stroke-width="30" stroke-linecap="round"/>
+</svg>
+</g><text x="122" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">64px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="180" y="548" width="32" height="32" preserveAspectRatio="xMidYMid meet">
+  <!-- A v2: the S of SilkMic split into two sound arcs; the gap is the quiet the app creates -->
+  <path d="M184 78 C184 50 160 36 130 36 C96 36 76 56 76 82 C76 102 88 112 102 118" fill="none" stroke="#000" stroke-width="30" stroke-linecap="round"/>
+  <path d="M154 138 C168 144 180 152 180 174 C180 200 160 220 126 220 C96 220 72 206 72 178" fill="none" stroke="#000" stroke-width="30" stroke-linecap="round"/>
+</svg>
+</g><text x="196" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">32px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="238" y="564" width="16" height="16" preserveAspectRatio="xMidYMid meet">
+  <!-- A v2: the S of SilkMic split into two sound arcs; the gap is the quiet the app creates -->
+  <path d="M184 78 C184 50 160 36 130 36 C96 36 76 56 76 82 C76 102 88 112 102 118" fill="none" stroke="#000" stroke-width="30" stroke-linecap="round"/>
+  <path d="M154 138 C168 144 180 152 180 174 C180 200 160 220 126 220 C96 220 72 206 72 178" fill="none" stroke="#000" stroke-width="30" stroke-linecap="round"/>
+</svg>
+</g><text x="246" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">16px</text><text x="90.0" y="636" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="26" font-weight="700" fill="#161616">A · A · Split S</text><text x="90.0" y="670" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">The S splits into two sound arcs; the gap</text><text x="90.0" y="696" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">is the quiet SilkMic creates</text><rect x="562.667" y="150" width="474.667" height="630" rx="18" fill="#fff" stroke="#161616" stroke-width="2"/><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="592.667" y="190" width="414.667" height="300" preserveAspectRatio="xMidYMid meet">
+  <!-- B: a mic capsule with one calm wave carved through it -->
+  <rect x="78" y="24" width="100" height="208" rx="50" fill="#000"/>
+  <path d="M60 132 C84 104 104 104 128 128 C152 152 172 152 196 124" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="round"/>
+</svg>
+</g><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="592.667" y="516" width="64" height="64" preserveAspectRatio="xMidYMid meet">
+  <!-- B: a mic capsule with one calm wave carved through it -->
+  <rect x="78" y="24" width="100" height="208" rx="50" fill="#000"/>
+  <path d="M60 132 C84 104 104 104 128 128 C152 152 172 152 196 124" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="round"/>
+</svg>
+</g><text x="624.667" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">64px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="682.667" y="548" width="32" height="32" preserveAspectRatio="xMidYMid meet">
+  <!-- B: a mic capsule with one calm wave carved through it -->
+  <rect x="78" y="24" width="100" height="208" rx="50" fill="#000"/>
+  <path d="M60 132 C84 104 104 104 128 128 C152 152 172 152 196 124" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="round"/>
+</svg>
+</g><text x="698.667" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">32px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="740.667" y="564" width="16" height="16" preserveAspectRatio="xMidYMid meet">
+  <!-- B: a mic capsule with one calm wave carved through it -->
+  <rect x="78" y="24" width="100" height="208" rx="50" fill="#000"/>
+  <path d="M60 132 C84 104 104 104 128 128 C152 152 172 152 196 124" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="round"/>
+</svg>
+</g><text x="748.667" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">16px</text><text x="592.6666666666667" y="636" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="26" font-weight="700" fill="#161616">B · B · Hush Capsule</text><text x="592.6666666666667" y="664" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#161616" letter-spacing="1.5">RECOMMENDED</text><text x="592.6666666666667" y="698" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">A mic capsule with one calm wave carved</text><text x="592.6666666666667" y="724" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">through it</text><rect x="1065.33" y="150" width="474.667" height="630" rx="18" fill="#fff" stroke="#e4e4e0" stroke-width="1"/><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="1095.33" y="190" width="414.667" height="300" preserveAspectRatio="xMidYMid meet">
+  <!-- C: scattered noise on the left becomes clean ripples on the right; the dot is your voice -->
+  <circle cx="112" cy="128" r="22" fill="#000"/>
+  <path d="M152 76 A64 64 0 0 1 152 180" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round"/>
+  <path d="M186 44 A104 104 0 0 1 186 212" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="62" cy="92" r="9" fill="#000"/>
+  <circle cx="48" cy="140" r="7" fill="#000"/>
+  <circle cx="70" cy="174" r="5" fill="#000"/>
+  <circle cx="30" cy="110" r="4" fill="#000"/>
+</svg>
+</g><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="1095.33" y="516" width="64" height="64" preserveAspectRatio="xMidYMid meet">
+  <!-- C: scattered noise on the left becomes clean ripples on the right; the dot is your voice -->
+  <circle cx="112" cy="128" r="22" fill="#000"/>
+  <path d="M152 76 A64 64 0 0 1 152 180" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round"/>
+  <path d="M186 44 A104 104 0 0 1 186 212" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="62" cy="92" r="9" fill="#000"/>
+  <circle cx="48" cy="140" r="7" fill="#000"/>
+  <circle cx="70" cy="174" r="5" fill="#000"/>
+  <circle cx="30" cy="110" r="4" fill="#000"/>
+</svg>
+</g><text x="1127.33" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">64px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="1185.33" y="548" width="32" height="32" preserveAspectRatio="xMidYMid meet">
+  <!-- C: scattered noise on the left becomes clean ripples on the right; the dot is your voice -->
+  <circle cx="112" cy="128" r="22" fill="#000"/>
+  <path d="M152 76 A64 64 0 0 1 152 180" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round"/>
+  <path d="M186 44 A104 104 0 0 1 186 212" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="62" cy="92" r="9" fill="#000"/>
+  <circle cx="48" cy="140" r="7" fill="#000"/>
+  <circle cx="70" cy="174" r="5" fill="#000"/>
+  <circle cx="30" cy="110" r="4" fill="#000"/>
+</svg>
+</g><text x="1201.33" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">32px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" x="1243.33" y="564" width="16" height="16" preserveAspectRatio="xMidYMid meet">
+  <!-- C: scattered noise on the left becomes clean ripples on the right; the dot is your voice -->
+  <circle cx="112" cy="128" r="22" fill="#000"/>
+  <path d="M152 76 A64 64 0 0 1 152 180" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round"/>
+  <path d="M186 44 A104 104 0 0 1 186 212" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="62" cy="92" r="9" fill="#000"/>
+  <circle cx="48" cy="140" r="7" fill="#000"/>
+  <circle cx="70" cy="174" r="5" fill="#000"/>
+  <circle cx="30" cy="110" r="4" fill="#000"/>
+</svg>
+</g><text x="1251.33" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">16px</text><text x="1095.3333333333335" y="636" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="26" font-weight="700" fill="#161616">C · C · Noise to Silk</text><text x="1095.3333333333335" y="670" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">Scattered noise on the left becomes clean</text><text x="1095.3333333333335" y="696" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">ripples on the right</text></svg>

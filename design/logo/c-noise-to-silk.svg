@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- C: scattered noise on the left becomes clean ripples on the right; the dot is your voice -->
+  <circle cx="112" cy="128" r="22" fill="#000"/>
+  <path d="M152 76 A64 64 0 0 1 152 180" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round"/>
+  <path d="M186 44 A104 104 0 0 1 186 212" fill="none" stroke="#000" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="62" cy="92" r="9" fill="#000"/>
+  <circle cx="48" cy="140" r="7" fill="#000"/>
+  <circle cx="70" cy="174" r="5" fill="#000"/>
+  <circle cx="30" cy="110" r="4" fill="#000"/>
+</svg>

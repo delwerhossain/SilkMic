@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- A v2: the S of SilkMic split into two sound arcs; the gap is the quiet the app creates -->
+  <path d="M184 78 C184 50 160 36 130 36 C96 36 76 56 76 82 C76 102 88 112 102 118" fill="none" stroke="#000" stroke-width="30" stroke-linecap="round"/>
+  <path d="M154 138 C168 144 180 152 180 174 C180 200 160 220 126 220 C96 220 72 206 72 178" fill="none" stroke="#000" stroke-width="30" stroke-linecap="round"/>
+</svg>
