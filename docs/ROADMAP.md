@@ -27,7 +27,7 @@ Legend: ☐ todo · ◐ in progress · ☑ done
 | 1.8 | Key custody: offline backup of EdDSA key and signing cert; CI secrets | Restore tested on a clean keychain | 1.7 |
 | 1.9 | CI on PRs: build, unit tests, driver C tests, DSP golden tests | Green CI on a test PR | 1.4, 1.5 |
 | 1.10 | Go/no-go spikes: DFN3 ANE vs CPU jitter; self-signed cert keeps mic permission on 27; Sparkle update prompt without Team ID | Results in `docs/benchmarks.md` | 1.5, 1.7 |
-| 1.11 | Design tokens first (`docs/DESIGN.md` + tokens), so Phase 2 UI is not built twice | Tokens in code | 1.0 |
+| 1.11 ◐ | Design tokens first (`docs/DESIGN.md` + tokens), so Phase 2 UI is not built twice | Tokens in code | 1.0 |
 
 ## Phase 2 — MVP features
 
@@ -60,7 +60,7 @@ Legend: ☐ todo · ◐ in progress · ☑ done
 
 | ID | Task | Done when | Deps |
 |---|---|---|---|
-| 3.1 | Logo + app icon + menu-bar template icons | Icon set in asset catalog; looks right at 16 px and in dark/light | naming |
+| 3.1 ☑ | Logo + app icon + menu-bar template icons | Icon set in asset catalog; looks right at 16 px and in dark/light | naming |
 | 3.2 | New design system (tokens, typography, colour, glass rules) | `DESIGN.md` approved; tokens implemented | 3.1 |
 | 3.3 | Main panel redesign (voice card first, then apps) | Matches approved mockup | 3.2, 2.x |
 | 3.4 | Settings + onboarding redesign | Matches mockup; VoiceOver labels | 3.2 |
@@ -111,3 +111,4 @@ Phase 0 → 1.1–1.2 → 1.0 naming → 1.3–1.11 (1.10 spikes decide go/no-go
 ## Progress log
 
 - 2026-11-01: Phase 0 done (owner's voice test pending). Repo `delwerhossain/SilkMic` created. 1.3 rename done (966 app tests pass) — remaining: own Sparkle EdDSA key (needs owner keychain, 1.8). 1.4 driver imported, renamed, new factory UUID, C tests pass, builds — remaining: keepalive, install test (owner password). 1.5 VoiceCore package, 240 tests pass. 1.6 README + NOTICE done — remaining: in-app Acknowledgements and About notices.
+- 2026-11-01 (later): 1.4 driver keepalive done (C tests + app sender; live test pending owner password). 1.6 About/Acknowledgements done (licence texts in app). 3.1 logo kit done (Hush Capsule, Silk Violet, app icon, menu-bar icon, favicon set; state icons drafted). 1.11 brand + voice-state tokens and accent colour done; full token pass continues with Phase 3 UI. App tests: 966 pass.
