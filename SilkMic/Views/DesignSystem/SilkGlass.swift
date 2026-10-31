@@ -116,10 +116,11 @@ private struct SilkPanelBackgroundModifier: ViewModifier {
         if reduceTransparency {
             content.background(Color(nsColor: .windowBackgroundColor))
         } else if #available(macOS 26.0, *) {
-            // Clear Liquid Glass like Control Center: no colour wash on the panel itself; colour
-            // only appears on active controls.
+            // Native macOS panel material (like Control Center and System Settings) for solid
+            // contrast; the Liquid Glass lives on the tiles inside, not on the whole panel.
             content
-                .background(GlassEffectBackground(cornerRadius: cornerRadius, tint: nil))
+                .background(Color.popupBackgroundOverlay)
+                .background(VisualEffectBackground(material: .popover, blendingMode: .behindWindow))
         } else {
             content
                 .background(Color.popupBackgroundOverlay)
