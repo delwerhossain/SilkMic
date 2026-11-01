@@ -11,6 +11,8 @@ struct ShortcutsTab: View {
     let shortcutsRegistry: ShortcutsRegistry
 
     @State private var banglaModel = BanglaModelManager.shared
+    @AppStorage(DictationController.fnEnabledKey) private var fnEnabled = true
+    @AppStorage(DictationController.fnLanguageKey) private var fnLanguage = DictationLanguage.english.rawValue
 
     var body: some View {
         ScrollView {
@@ -35,14 +37,36 @@ struct ShortcutsTab: View {
     private var dictationSection: some View {
         SettingsSection("Dictation") {
             SettingsRow(
-                "Dictate in English",
-                description: "Hold to talk, release to type. Tap once for hands-free, tap again to stop."
+                "Hold Fn (🌐) to Dictate",
+                description: "Hold Fn, talk, release to type. Tap Fn once for hands-free, tap again to stop. Tip: set Keyboard → \"Press 🌐 key to\" → Do Nothing."
+            ) {
+                Toggle("", isOn: $fnEnabled)
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .labelsHidden()
+            }
+            SettingsRowDivider()
+            SettingsRow(
+                "Fn Dictation Language",
+                description: "Language used when you hold Fn."
+            ) {
+                Picker("", selection: $fnLanguage) {
+                    ForEach(DictationLanguage.allCases) { Text($0.title).tag($0.rawValue) }
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .frame(width: 160)
+            }
+            SettingsRowDivider()
+            SettingsRow(
+                "Extra Shortcut: English",
+                description: "Optional key combo for English dictation (hold to talk)."
             ) {
                 KeyboardShortcuts.Recorder(for: .dictateEnglish)
             }
             SettingsRowDivider()
             SettingsRow(
-                "Dictate in Bangla",
+                "Extra Shortcut: Bangla",
                 description: banglaModel.isInstalled
                     ? "Same as English, written in Bangla letters (Bangla model installed)."
                     : "Same as English. Without the Bangla model it is written in English letters."

@@ -10,9 +10,9 @@ import os
 
 extension KeyboardShortcuts.Name {
     /// Hold to dictate in English (tap once for hands-free, tap again to stop).
-    static let dictateEnglish = Self("silkmic.dictate.english", default: .init(.space, modifiers: [.option]))
+    static let dictateEnglish = Self("silkmic.dictate.english")
     /// Hold to dictate in Bangla.
-    static let dictateBangla = Self("silkmic.dictate.bangla", default: .init(.space, modifiers: [.option, .shift]))
+    static let dictateBangla = Self("silkmic.dictate.bangla")
 }
 
 /// Wispr Flow–style dictation: hold a hotkey, speak, release — the text is typed into the app
@@ -46,12 +46,47 @@ final class DictationController {
     /// A press shorter than this is a tap: dictation stays on until the next tap.
     private static let tapThreshold: TimeInterval = 0.35
 
+    static let fnLanguageKey = "silkmic.dictation.fnLanguage"
+    static let fnEnabledKey = "silkmic.dictation.fnEnabled"
+    @ObservationIgnored private var fnMonitors: [Any] = []
+    @ObservationIgnored private var fnDown = false
+
     init() {
         for (name, language) in [(KeyboardShortcuts.Name.dictateEnglish, DictationLanguage.english),
                                  (.dictateBangla, .bangla)] {
             KeyboardShortcuts.onKeyDown(for: name) { [weak self] in self?.keyDown(language) }
             KeyboardShortcuts.onKeyUp(for: name) { [weak self] in self?.keyUp() }
         }
+        installFnMonitor()
+    }
+
+    /// Wispr Flow–style: hold the Fn (🌐) key to talk. Needs Accessibility (same permission as
+    /// pasting). Set System Settings → Keyboard → "Press 🌐 key to" → "Do Nothing" so macOS does
+    /// not open the emoji picker or Dictation at the same time.
+    private func installFnMonitor() {
+        if !AXIsProcessTrusted() {
+            // Ask once; global key monitoring and pasting both need Accessibility.
+            _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
+        }
+        let handler: (NSEvent) -> Void = { [weak self] event in
+            guard event.keyCode == 63 else { return }   // kVK_Function
+            let isDown = event.modifierFlags.contains(.function)
+            Task { @MainActor in self?.fnChanged(isDown: isDown) }
+        }
+        if let global = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged, handler: handler) {
+            fnMonitors.append(global)
+        }
+        if let local = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged, handler: { handler($0); return $0 }) {
+            fnMonitors.append(local)
+        }
+    }
+
+    private func fnChanged(isDown: Bool) {
+        guard UserDefaults.standard.object(forKey: Self.fnEnabledKey) as? Bool ?? true else { return }
+        guard isDown != fnDown else { return }
+        fnDown = isDown
+        let language = DictationLanguage(rawValue: UserDefaults.standard.string(forKey: Self.fnLanguageKey) ?? "") ?? .english
+        if isDown { keyDown(language) } else { keyUp() }
     }
 
     // MARK: - Hotkey state machine
@@ -107,11 +142,8 @@ final class DictationController {
             engineBox = nil
             whisperCollector.reset(inputFormat: format)
             let collector = whisperCollector
-            input.installTap(onBus: 0, bufferSize: 2048, format: format) { [weak self] buffer, _ in
-                collector.append(buffer)
-                let level = Self.rms(buffer)
-                Task { @MainActor in self?.level = level }
-            }
+            Self.installTap(on: input, format: format, sink: { collector.append($0) },
+                            level: { [weak self] value in Task { @MainActor in self?.level = value } })
         } else {
             let engine = SpeechEngine()
             do {
@@ -122,11 +154,9 @@ final class DictationController {
                 return
             }
             engineBox = engine
-            input.installTap(onBus: 0, bufferSize: 2048, format: format) { [weak self, engine] buffer, _ in
-                engine.append(buffer)
-                let level = Self.rms(buffer)
-                Task { @MainActor in self?.level = level }
-            }
+            let box = UncheckedBox(engine)
+            Self.installTap(on: input, format: format, sink: { box.value.append($0) },
+                            level: { [weak self] value in Task { @MainActor in self?.level = value } })
         }
         currentLanguage = language
         usingWhisper = useWhisper
@@ -140,7 +170,7 @@ final class DictationController {
         // The key may already be up (a quick tap) while the model was loading.
         phase = .listening(language)
         if !handsFree, let start = pressStartedAt, Date().timeIntervalSince(start) >= Self.tapThreshold,
-           !KeyboardShortcuts.isAnyDictationKeyDown {
+           !KeyboardShortcuts.isAnyDictationKeyDown, !fnDown {
             await stopAndInsert()
         }
     }
@@ -202,6 +232,17 @@ final class DictationController {
             guard let self, case .failed = self.phase else { return }
             self.phase = .idle
             self.hud.hide()
+        }
+    }
+
+    /// Installed from a nonisolated context: the tap runs on a realtime audio thread, and a
+    /// closure formed inside this @MainActor class would assert the main actor there and crash.
+    nonisolated private static func installTap(on input: AVAudioInputNode, format: AVAudioFormat,
+                                               sink: @escaping @Sendable (AVAudioPCMBuffer) -> Void,
+                                               level: @escaping @Sendable (Float) -> Void) {
+        input.installTap(onBus: 0, bufferSize: 2048, format: format) { buffer, _ in
+            sink(buffer)
+            level(rms(buffer))
         }
     }
 
@@ -296,4 +337,11 @@ final class SampleCollector: @unchecked Sendable {
         samples.removeAll()
         return result
     }
+}
+
+/// Carries a non-Sendable reference into the audio tap (the engine is only used from that thread
+/// until the take ends).
+final class UncheckedBox<T>: @unchecked Sendable {
+    let value: T
+    init(_ value: T) { self.value = value }
 }
