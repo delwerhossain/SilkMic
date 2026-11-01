@@ -35,6 +35,8 @@ final class SpeechEngine {
     private var inputContinuation: AsyncStream<AnalyzerInput>.Continuation?
     private var resultsTask: Task<String, Error>?
     private var converter: AVAudioConverter?
+    /// Final text collected so far (read on timeout, so a stuck engine still returns what it heard).
+    private let collected = LockedText()
     private(set) var analyzerFormat: AVAudioFormat?
 
     /// Downloads the language model once if macOS does not have it yet.
@@ -54,12 +56,13 @@ final class SpeechEngine {
         analyzerFormat = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [transcriber])
         let (stream, continuation) = AsyncStream<AnalyzerInput>.makeStream()
         inputContinuation = continuation
+        let collected = self.collected
+        collected.reset()
         resultsTask = Task {
-            var text = ""
             for try await result in transcriber.results where result.isFinal {
-                text += String(result.text.characters)
+                collected.append(String(result.text.characters))
             }
-            return text
+            return collected.value
         }
         try await analyzer.start(inputSequence: stream)
         self.analyzer = analyzer
@@ -95,18 +98,37 @@ final class SpeechEngine {
         }
     }
 
-    /// Ends the take and returns the transcript (empty if nothing was understood).
-    func finish() async -> String {
+    /// Ends the take and returns the transcript (empty if nothing was understood). Never waits
+    /// longer than `timeout`: if the engine stalls, it returns whatever it has already written.
+    func finish(timeout: Duration = .seconds(6)) async -> String {
         inputContinuation?.finish()
         inputContinuation = nil
-        do {
-            try await analyzer?.finalizeAndFinishThroughEndOfInput()
-            let text = try await resultsTask?.value ?? ""
-            return text.trimmingCharacters(in: .whitespacesAndNewlines)
-        } catch {
-            logger.error("Transcription failed: \(error.localizedDescription, privacy: .public)")
-            return ""
+        let analyzer = self.analyzer
+        let results = resultsTask
+        let finished = await withTaskGroup(of: Bool.self) { group -> Bool in
+            group.addTask {
+                do {
+                    try await analyzer?.finalizeAndFinishThroughEndOfInput()
+                    _ = try await results?.value
+                    return true
+                } catch {
+                    return true
+                }
+            }
+            group.addTask {
+                try? await Task.sleep(for: timeout)
+                return false
+            }
+            let first = await group.next() ?? false
+            group.cancelAll()
+            return first
         }
+        if !finished {
+            logger.error("Transcription timed out; returning partial text")
+            resultsTask?.cancel()
+            Task { [analyzer] in await analyzer?.cancelAndFinishNow() }
+        }
+        return collected.value.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     func cancel() {
@@ -115,4 +137,13 @@ final class SpeechEngine {
         resultsTask?.cancel()
         Task { [analyzer] in await analyzer?.cancelAndFinishNow() }
     }
+}
+
+/// Thread-safe text accumulator.
+final class LockedText: @unchecked Sendable {
+    private let lock = NSLock()
+    private var text = ""
+    var value: String { lock.lock(); defer { lock.unlock() }; return text }
+    func append(_ s: String) { lock.lock(); text += s; lock.unlock() }
+    func reset() { lock.lock(); text = ""; lock.unlock() }
 }

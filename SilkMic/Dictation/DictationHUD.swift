@@ -9,7 +9,8 @@ import SwiftUI
 final class DictationHUD {
     private weak var controller: DictationController?
     private var panel: NSPanel?
-    private static let size = NSSize(width: 172, height: 40)
+    private static let size = NSSize(width: 132, height: 32)
+    static let showPillKey = "silkmic.dictation.showPill"
 
     init(controller: DictationController) {
         self.controller = controller
@@ -17,6 +18,7 @@ final class DictationHUD {
 
     func show() {
         guard let controller else { return }
+        guard UserDefaults.standard.object(forKey: Self.showPillKey) as? Bool ?? true else { return }
         if panel == nil {
             let panel = NSPanel(contentRect: NSRect(origin: .zero, size: Self.size),
                                 styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -24,7 +26,7 @@ final class DictationHUD {
             panel.backgroundColor = .clear
             panel.hasShadow = true
             panel.level = .statusBar
-            panel.ignoresMouseEvents = true
+            panel.ignoresMouseEvents = false   // hover shows ✕ to cancel
             panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
             panel.contentView = NSHostingView(rootView: DictationHUDView(controller: controller))
             self.panel = panel
@@ -60,9 +62,10 @@ final class DictationHUD {
 
 struct DictationHUDView: View {
     let controller: DictationController
+    @State private var hovering = false
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             badge
             Group {
                 switch controller.phase {
@@ -81,9 +84,25 @@ struct DictationHUDView: View {
                 }
             }
             .frame(maxWidth: .infinity)
+            if hovering {
+                Button {
+                    controller.cancel()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .frame(width: 18, height: 18)
+                        .background(Circle().fill(Color.white.opacity(0.18)))
+                }
+                .buttonStyle(.plain)
+                .help("Cancel (Esc)")
+                .accessibilityLabel("Cancel dictation")
+            }
         }
-        .padding(.horizontal, 10)
-        .frame(width: 172, height: 40)
+        .padding(.horizontal, 6)
+        .frame(width: 132, height: 32)
+        .contentShape(Capsule())
+        .onHover { hovering = $0 }
         .background(Capsule().fill(Color.black.opacity(0.88)))
         .overlay(Capsule().strokeBorder(Color.white.opacity(0.14), lineWidth: 0.5))
         .environment(\.colorScheme, .dark)
@@ -110,14 +129,14 @@ struct DictationHUDView: View {
             }
         }
         .foregroundStyle(.white)
-        .frame(width: 24, height: 24)
+        .frame(width: 20, height: 20)
     }
 }
 
 /// Bars that follow the input level, with a gentle idle motion so the pill feels alive.
 private struct Waveform: View {
     let level: Float
-    private let shape: [Float] = [0.35, 0.6, 0.85, 1, 0.85, 0.6, 0.35, 0.55, 0.8, 0.55]
+    private let shape: [Float] = [0.4, 0.75, 1, 0.75, 0.4, 0.65, 0.9]
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1 / 30)) { context in
@@ -125,13 +144,13 @@ private struct Waveform: View {
             HStack(spacing: 3) {
                 ForEach(shape.indices, id: \.self) { i in
                     let wobble = Float(0.5 + 0.5 * sin(t * 9 + Double(i) * 0.8))
-                    let height = 3 + 20 * CGFloat(min(1, max(0.08, level * shape[i] * (0.65 + 0.35 * wobble))))
+                    let height = 3 + 14 * CGFloat(min(1, max(0.08, level * shape[i] * (0.65 + 0.35 * wobble))))
                     Capsule()
                         .fill(Color.white)
                         .frame(width: 3, height: height)
                 }
             }
-            .frame(height: 24)
+            .frame(height: 18)
         }
     }
 }
@@ -145,7 +164,7 @@ private struct WritingDots: View {
                 ForEach(0..<3) { i in
                     Circle()
                         .fill(Color.white)
-                        .frame(width: 6, height: 6)
+                        .frame(width: 5, height: 5)
                         .opacity(0.35 + 0.65 * (0.5 + 0.5 * sin(t * 6 - Double(i) * 0.9)))
                 }
             }

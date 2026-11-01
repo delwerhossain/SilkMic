@@ -29,7 +29,10 @@ final class DictationController {
         case failed(String)
     }
 
-    private(set) var phase: Phase = .idle
+    private(set) var phase: Phase = .idle {
+        didSet { armWatchdog() }
+    }
+    @ObservationIgnored private var watchdog: Task<Void, Never>?
     /// Input level 0…1 for the HUD meter while listening.
     private(set) var level: Float = 0
 
@@ -58,6 +61,44 @@ final class DictationController {
             KeyboardShortcuts.onKeyUp(for: name) { [weak self] in self?.keyUp() }
         }
         installFnMonitor()
+        installEscapeMonitor()
+    }
+
+    /// Never let a take hang: starting may wait for a model, writing may wait for the engine.
+    private func armWatchdog() {
+        watchdog?.cancel()
+        let limit: Double
+        switch phase {
+        case .preparing: limit = 12
+        case .transcribing: limit = 15
+        case .listening: limit = 300   // 5 minutes of hands-free at most
+        default: return
+        }
+        let snapshot = phase
+        watchdog = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(limit))
+            guard !Task.isCancelled, let self, self.phase == snapshot else { return }
+            self.logger.error("Dictation watchdog fired in \(String(describing: snapshot), privacy: .public)")
+            self.cancel()
+            self.fail("Took too long. Try again.")
+        }
+    }
+
+    /// Esc cancels a take at any point (nothing is typed).
+    private func installEscapeMonitor() {
+        let handler: (NSEvent) -> Void = { [weak self] event in
+            guard event.keyCode == 53 else { return }   // kVK_Escape
+            Task { @MainActor in
+                guard let self, self.phase != .idle else { return }
+                self.cancel()
+            }
+        }
+        if let global = NSEvent.addGlobalMonitorForEvents(matching: .keyDown, handler: handler) {
+            fnMonitors.append(global)
+        }
+        if let local = NSEvent.addLocalMonitorForEvents(matching: .keyDown, handler: { handler($0); return $0 }) {
+            fnMonitors.append(local)
+        }
     }
 
     /// Wispr Flow–style: hold the Fn (🌐) key to talk. Needs Accessibility (same permission as
@@ -189,8 +230,10 @@ final class DictationController {
             if let model = await BanglaModelManager.shared.model(), samples.count > 8_000 {
                 text = await Task.detached(priority: .userInitiated) { model.transcribe(samples: samples, language: "bn") }.value
             }
+            guard phase == .transcribing else { return }   // cancelled while writing
         } else if #available(macOS 26.0, *), let engine = engineBox as? SpeechEngine {
             text = await engine.finish()
+            guard phase == .transcribing else { return }   // cancelled while writing
         }
         engineBox = nil
         if currentLanguage == .bangla && !usingWhisper { suggestBanglaModelOnce() }

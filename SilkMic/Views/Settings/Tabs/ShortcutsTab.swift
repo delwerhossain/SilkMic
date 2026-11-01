@@ -12,6 +12,7 @@ struct ShortcutsTab: View {
 
     @State private var banglaModel = BanglaModelManager.shared
     @AppStorage(DictationController.fnEnabledKey) private var fnEnabled = true
+    @AppStorage(DictationHUD.showPillKey) private var showPill = true
     @AppStorage(DictationController.fnLanguageKey) private var fnLanguage = DictationLanguage.english.rawValue
 
     var body: some View {
@@ -41,6 +42,16 @@ struct ShortcutsTab: View {
                 description: "Hold Fn, talk, release to type. Tap Fn once for hands-free, tap again to stop. Tip: set Keyboard → \"Press 🌐 key to\" → Do Nothing."
             ) {
                 Toggle("", isOn: $fnEnabled)
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .labelsHidden()
+            }
+            SettingsRowDivider()
+            SettingsRow(
+                "Show Dictation Pill",
+                description: "Small pill at the bottom of the screen while dictating. Hover it for ✕, or press Esc, to cancel."
+            ) {
+                Toggle("", isOn: $showPill)
                     .toggleStyle(.switch)
                     .controlSize(.small)
                     .labelsHidden()
