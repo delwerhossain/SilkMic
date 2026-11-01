@@ -10,6 +10,8 @@ struct ShortcutsTab: View {
     let mediaKeyMonitor: MediaKeyMonitor
     let shortcutsRegistry: ShortcutsRegistry
 
+    @State private var banglaModel = BanglaModelManager.shared
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -41,9 +43,47 @@ struct ShortcutsTab: View {
             SettingsRowDivider()
             SettingsRow(
                 "Dictate in Bangla",
-                description: "Same as English, in Bangla (written in Latin letters, e.g. \"ami ajke office jacchi\")."
+                description: banglaModel.isInstalled
+                    ? "Same as English, written in Bangla letters (Bangla model installed)."
+                    : "Same as English. Without the Bangla model it is written in English letters."
             ) {
                 KeyboardShortcuts.Recorder(for: .dictateBangla)
+            }
+            SettingsRowDivider()
+            SettingsRow(
+                "Bangla Letters Model",
+                description: "Optional, \(BanglaModelManager.sizeLabel). Writes Bangla in Bangla script, on this Mac. BengaliAI Whisper medium (Apache-2.0)."
+            ) {
+                banglaModelControl
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var banglaModelControl: some View {
+        switch banglaModel.state {
+        case .installed:
+            HStack(spacing: 8) {
+                Label("Installed", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                    .font(.system(size: 12))
+                Button("Remove") { banglaModel.remove() }
+                    .controlSize(.small)
+            }
+        case .downloading(let progress):
+            HStack(spacing: 8) {
+                ProgressView(value: progress).frame(width: 110)
+                Text("\(Int(progress * 100))%").font(.system(size: 11).monospacedDigit())
+                Button("Cancel") { banglaModel.cancelDownload() }.controlSize(.small)
+            }
+        case .notInstalled, .failed:
+            VStack(alignment: .trailing, spacing: 2) {
+                Button("Download \(BanglaModelManager.sizeLabel)") { banglaModel.download() }
+                    .controlSize(.small)
+                    .buttonStyle(.borderedProminent)
+                if case .failed(let message) = banglaModel.state {
+                    Text(message).font(.system(size: 10)).foregroundStyle(.red)
+                }
             }
         }
     }

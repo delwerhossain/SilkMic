@@ -4,6 +4,8 @@ import AppKit
 import ApplicationServices
 import KeyboardShortcuts
 import Observation
+import UserNotifications
+import WhisperCpp
 import os
 
 extension KeyboardShortcuts.Name {
@@ -36,6 +38,9 @@ final class DictationController {
     @ObservationIgnored private var engineBox: AnyObject?
     @ObservationIgnored private var pressStartedAt: Date?
     @ObservationIgnored private var handsFree = false
+    /// Bengali-script path: 16 kHz mono samples for whisper.cpp (nil when Apple's engine is used).
+    @ObservationIgnored private var whisperSamples: [Float]?
+    @ObservationIgnored private let whisperCollector = SampleCollector()
     @ObservationIgnored private lazy var hud = DictationHUD(controller: self)
 
     /// A press shorter than this is a tap: dictation stays on until the next tap.
@@ -92,23 +97,39 @@ final class DictationController {
             fail("Allow microphone access for SilkMic in System Settings.")
             return
         }
-        let engine = SpeechEngine()
-        do {
-            try await engine.start(language: language)
-        } catch {
-            fail("Could not start \(language.title) dictation.")
-            logger.error("Dictation start failed: \(error.localizedDescription, privacy: .public)")
-            return
-        }
-        engineBox = engine
+        let useWhisper = language == .bangla && BanglaModelManager.shared.isInstalled
         let input = audioEngine.inputNode
         let format = input.outputFormat(forBus: 0)
         input.removeTap(onBus: 0)
-        input.installTap(onBus: 0, bufferSize: 2048, format: format) { [weak self, engine] buffer, _ in
-            engine.append(buffer)
-            let level = Self.rms(buffer)
-            Task { @MainActor in self?.level = level }
+        if useWhisper {
+            // Bengali script via the downloaded Whisper model; warm it while the user talks.
+            BanglaModelManager.shared.preload()
+            engineBox = nil
+            whisperCollector.reset(inputFormat: format)
+            let collector = whisperCollector
+            input.installTap(onBus: 0, bufferSize: 2048, format: format) { [weak self] buffer, _ in
+                collector.append(buffer)
+                let level = Self.rms(buffer)
+                Task { @MainActor in self?.level = level }
+            }
+        } else {
+            let engine = SpeechEngine()
+            do {
+                try await engine.start(language: language)
+            } catch {
+                fail("Could not start \(language.title) dictation.")
+                logger.error("Dictation start failed: \(error.localizedDescription, privacy: .public)")
+                return
+            }
+            engineBox = engine
+            input.installTap(onBus: 0, bufferSize: 2048, format: format) { [weak self, engine] buffer, _ in
+                engine.append(buffer)
+                let level = Self.rms(buffer)
+                Task { @MainActor in self?.level = level }
+            }
         }
+        currentLanguage = language
+        usingWhisper = useWhisper
         do {
             try audioEngine.start()
         } catch {
@@ -124,14 +145,25 @@ final class DictationController {
         }
     }
 
+    @ObservationIgnored private var currentLanguage: DictationLanguage = .english
+    @ObservationIgnored private var usingWhisper = false
+
     private func stopAndInsert() async {
-        guard #available(macOS 26.0, *), let engine = engineBox as? SpeechEngine else { return }
         audioEngine.inputNode.removeTap(onBus: 0)
         audioEngine.stop()
         level = 0
         phase = .transcribing
-        let text = await engine.finish()
+        var text = ""
+        if usingWhisper {
+            let samples = whisperCollector.drain()
+            if let model = await BanglaModelManager.shared.model(), samples.count > 8_000 {
+                text = await Task.detached(priority: .userInitiated) { model.transcribe(samples: samples, language: "bn") }.value
+            }
+        } else if #available(macOS 26.0, *), let engine = engineBox as? SpeechEngine {
+            text = await engine.finish()
+        }
         engineBox = nil
+        if currentLanguage == .bangla && !usingWhisper { suggestBanglaModelOnce() }
         if text.isEmpty {
             phase = .idle
             hud.hide()
@@ -149,6 +181,17 @@ final class DictationController {
         engineBox = nil
         phase = .idle
         hud.hide()
+    }
+
+    /// First Bangla dictation without the script model: suggest it once (it is optional).
+    private func suggestBanglaModelOnce() {
+        let key = "silkmic.banglaModelSuggested"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        UserDefaults.standard.set(true, forKey: key)
+        let content = UNMutableNotificationContent()
+        content.title = "Write Bangla in Bangla letters?"
+        content.body = "Download the optional Bangla model (\(BanglaModelManager.sizeLabel)) in SilkMic Settings → Shortcuts → Dictation. Without it, Bangla is written in English letters."
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "bangla-model-suggestion", content: content, trigger: nil))
     }
 
     private func fail(_ message: String) {
@@ -213,5 +256,44 @@ enum TextInserter {
             pasteboard.clearContents()
             pasteboard.setString(previous, forType: .string)
         }
+    }
+}
+
+
+/// Collects tap audio as 16 kHz mono Float32 for whisper.cpp. Thread-safe (tap thread writes).
+final class SampleCollector: @unchecked Sendable {
+    private let lock = NSLock()
+    private var samples: [Float] = []
+    private var converter: AVAudioConverter?
+    private let target = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16_000, channels: 1, interleaved: false)!
+
+    func reset(inputFormat: AVAudioFormat) {
+        lock.lock(); defer { lock.unlock() }
+        samples.removeAll(keepingCapacity: true)
+        converter = AVAudioConverter(from: inputFormat, to: target)
+    }
+
+    func append(_ buffer: AVAudioPCMBuffer) {
+        guard let converter else { return }
+        let capacity = AVAudioFrameCount(Double(buffer.frameLength) * target.sampleRate / buffer.format.sampleRate) + 32
+        guard let out = AVAudioPCMBuffer(pcmFormat: target, frameCapacity: capacity) else { return }
+        var consumed = false
+        var error: NSError?
+        converter.convert(to: out, error: &error) { _, status in
+            if consumed { status.pointee = .noDataNow; return nil }
+            consumed = true
+            status.pointee = .haveData
+            return buffer
+        }
+        guard error == nil, let data = out.floatChannelData?[0], out.frameLength > 0 else { return }
+        lock.lock(); defer { lock.unlock() }
+        samples.append(contentsOf: UnsafeBufferPointer(start: data, count: Int(out.frameLength)))
+    }
+
+    func drain() -> [Float] {
+        lock.lock(); defer { lock.unlock() }
+        let result = samples
+        samples.removeAll()
+        return result
     }
 }

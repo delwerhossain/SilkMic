@@ -29,6 +29,8 @@ Sparkle — https://github.com/sparkle-project/Sparkle — MIT-style licence
 KeyboardShortcuts — https://github.com/sindresorhus/KeyboardShortcuts — MIT
 FluidMenuBarExtra — https://github.com/wadetregaskis/FluidMenuBarExtra — MIT
 DynamicNotchKit — https://github.com/MrKai77/DynamicNotchKit — MIT
+whisper.cpp — https://github.com/ggml-org/whisper.cpp — MIT
+Optional Bangla model (downloaded on request, not bundled): BengaliAI tugstugi whisper-medium, ggml build by winshades — https://huggingface.co/winshades/bengaliai-whisper-medium-ggml — Apache-2.0
 swift-snapshot-testing (tests only) — https://github.com/pointfreeco/swift-snapshot-testing — MIT
 DeepFilterNet (model and reference code) — https://github.com/Rikorose/DeepFilterNet — MIT or Apache-2.0
 

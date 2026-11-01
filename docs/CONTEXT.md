@@ -25,12 +25,13 @@ Pitch: "Free SoundSource + Krisp for Mac, on-device." Logo: Hush Capsule (mic ca
 - Notch panel (hover/click, spring) — `Views/Notch/NotchController.swift` (DynamicNotchKit 1.1.0).
 - Device connect/disconnect notifications — `Voice/DeviceAlertNotifier.swift`.
 - Launch at login default on; FineTune and NoNoise login items removed (they are no longer needed).
-- Dictation — `SilkMic/Dictation/`: hold ⌥Space (English) / ⌥⇧Space (Bangla, Latin letters), tap for hands-free; pastes via ⌘V (needs Accessibility); HUD pill under notch. Probe: English 0.30 s, Bangla 0.87 s.
+- Dictation — `SilkMic/Dictation/`: hold ⌥Space (English, Apple engine) / ⌥⇧Space (Bangla), tap for hands-free; pastes via ⌘V (needs Accessibility); HUD pill under notch. English 0.30 s.
+- Optional Bangla-letters model (539 MB, BengaliAI whisper-medium q5_0 via whisper.cpp b5454, `Packages/WhisperCpp`): download/remove in Settings → Shortcuts → Dictation; suggested once by notification after the first Bangla dictation. Installed on the owner's Mac. Test clip: exact Bangla script, ~1.3 s warm (model kept 10 min after use). Without it Bangla uses Apple bn-IN (Latin letters).
 
 ## Pending / next
 
 1. Owner tests: dictation with real hotkey (Mic, Speech Recognition, Accessibility permissions), notch hover, QCY speech.
-2. Bengali-script optional download (IndicXlit first).
+2. Owner feedback on Bangla model accuracy/speed with real voice.
 3. MVP rest: mute hotkey + talking-while-muted, Mic Check, Hi-Fi Saver warning UI, raw-mic detector, migration (remove old NoNoise driver), uninstall, menu-bar state icons (drafts in `design/logo/menubar`).
 4. Release: Sparkle EdDSA key + own feed (owner keychain), self-signed cert, DMG, README with real before/after demo, launch posts (r/macapps, Show HN, Product Hunt).
 
