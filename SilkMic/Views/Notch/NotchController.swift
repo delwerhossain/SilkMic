@@ -183,6 +183,11 @@ struct NotchVoiceView: View {
             .background(NotchGlassLight())
             .environment(\.silkGlassStyle, .clear)
             .environment(\.colorScheme, .dark)
+            // The notch panel never takes focus (typing stays in your app), so tell SwiftUI to
+            // draw it as active anyway: full Liquid Glass and coloured switches, not the dimmed
+            // inactive-window look.
+            .environment(\.appearsActive, true)
+            .environment(\.controlActiveState, .key)
     }
 }
 
