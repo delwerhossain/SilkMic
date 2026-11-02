@@ -15,6 +15,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         virtualMicKeepalive.start()
+        // First launch of a downloaded copy (or an update with a newer driver): install the mic.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            DriverInstaller.offerInstallIfNeeded()
+        }
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
