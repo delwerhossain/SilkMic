@@ -133,7 +133,7 @@ You need Xcode 26 or later.
 git clone https://github.com/delwerhossain/SilkMic.git
 cd SilkMic
 Driver/build-driver.sh && Driver/install-driver.sh   # virtual mic, asks for your password
-scripts/dev-install.sh                               # builds and opens ~/Applications/SilkMic.app
+scripts/dev-install.sh                               # builds, signs and opens SilkMic
 ```
 
 `scripts/build-dmg.sh` builds the same DMG as a release. How SilkMic was designed: [product requirements](docs/PRD.md), [technical design](docs/TRD.md), [research](docs/RESEARCH.md), [naming](docs/NAMING.md), [design](docs/DESIGN.md) and [roadmap](docs/ROADMAP.md).
