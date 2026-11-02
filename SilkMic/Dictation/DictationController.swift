@@ -62,6 +62,41 @@ final class DictationController {
         }
         installFnMonitor()
         installEscapeMonitor()
+        Self.requestAccessibilityOnce()
+        // Key monitors made before Accessibility was granted stay deaf, so rebuild them when the
+        // permission changes (no relaunch needed).
+        axObserver = DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("com.apple.accessibility.api"), object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(500))   // the new state lands a moment later
+                self?.reinstallKeyMonitors()
+            }
+        }
+    }
+
+    @ObservationIgnored private var axObserver: NSObjectProtocol?
+
+    private func reinstallKeyMonitors() {
+        fnMonitors.forEach(NSEvent.removeMonitor)
+        fnMonitors.removeAll()
+        installFnMonitor()
+        installEscapeMonitor()
+    }
+
+    /// Hold-Fn dictation and pasting need Accessibility. Ask at most once per installed copy of
+    /// the app: never on every launch or every dictation. (Each new ad-hoc signed build is a new
+    /// app to macOS, so after an update it may need asking once more.)
+    static func requestAccessibilityOnce() {
+        guard !AXIsProcessTrusted(),
+              UserDefaults.standard.object(forKey: fnEnabledKey) as? Bool ?? true else { return }
+        let stamp = Bundle.main.executableURL
+            .flatMap { try? FileManager.default.attributesOfItem(atPath: $0.path)[.modificationDate] as? Date }
+            .map { String(Int($0.timeIntervalSince1970)) } ?? ""
+        let key = "silkmic.accessibility.askedFor"
+        guard UserDefaults.standard.string(forKey: key) != stamp else { return }
+        UserDefaults.standard.set(stamp, forKey: key)
+        _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
     }
 
     /// Never let a take hang: starting may wait for a model, writing may wait for the engine.
@@ -105,10 +140,6 @@ final class DictationController {
     /// pasting). Set System Settings → Keyboard → "Press 🌐 key to" → "Do Nothing" so macOS does
     /// not open the emoji picker or Dictation at the same time.
     private func installFnMonitor() {
-        if !AXIsProcessTrusted() {
-            // Ask once; global key monitoring and pasting both need Accessibility.
-            _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
-        }
         let handler: (NSEvent) -> Void = { [weak self] event in
             guard event.keyCode == 63 else { return }   // kVK_Function
             let isDown = event.modifierFlags.contains(.function)
@@ -321,7 +352,7 @@ enum TextInserter {
         pasteboard.setString(text, forType: .string)
         let changeCount = pasteboard.changeCount
 
-        guard AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary) else {
+        guard AXIsProcessTrusted() else {
             // Without Accessibility the text stays on the clipboard so it can be pasted by hand.
             return
         }
