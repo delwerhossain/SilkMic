@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="design/logo/export/icon-192.png" width="112" height="112" alt="SilkMic app icon">
+  <img src="design/logo/export/silkmic-symbol-app-icon.svg" width="112" height="112" alt="SilkMic app icon">
 </p>
 
 <h1 align="center">SilkMic: free AI noise cancellation and dictation for Mac</h1>

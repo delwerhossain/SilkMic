@@ -4,14 +4,6 @@ Status: draft v1 · 2026-11-01. Each task has an ID, a done-check, and dependenc
 
 Legend: ☐ todo · ◐ in progress · ☑ done
 
-## Phase 0 — fix the owner's Mac today (no new code)
-
-| ID | Task | Done when | Deps |
-|---|---|---|---|
-| 0.1 ☑ | FineTune + NoNoise launch at login | Both running after a reboot | – |
-| 0.2 ☑ | NoNoise attenuation 100 → 30 dB | `mv.attenuationLimitDb = 30`; Voice Memos test sounds natural | – |
-| 0.3 | Confirm FineTune input lock = NoNoise Mic and NoNoise input = MacBook mic | Voice note to self is clean | 0.1 |
-
 ## Phase 1 — foundations
 
 | ID | Task | Done when | Deps |
@@ -73,7 +65,7 @@ Legend: ☐ todo · ◐ in progress · ☑ done
 | 4.1 | DMG + zip packaging, Sparkle appcast, GitHub Actions release | Tagged build produces signed artifacts | 1.7 |
 | 4.2 | README (pitch, GIF, before/after audio, install + Open Anyway guide, credits) | Reviewed | 3.x |
 | 4.3 | Full manual test matrix | All S1–S7 pass on matrix | Phase 2 |
-| 4.4 | Undo Phase 0 (remove FineTune/NoNoise login items and old driver), then two weeks of owner daily use | No manual fixes needed | 4.3 |
+| 4.4 | Two weeks of daily use on real Macs before launch | No manual fixes needed | 4.3 |
 | 4.5 | Launch: Show HN, r/macapps, Product Hunt, awesome-macos | Posts live | 4.4 |
 
 ## Phase 5 — v1.x (P1)
@@ -86,31 +78,17 @@ Legend: ☐ todo · ◐ in progress · ☑ done
 
 ## Working order for this repo
 
-Phase 0 → 1.1–1.2 → 1.0 naming → 1.3–1.11 (1.10 spikes decide go/no-go) → 2.1 → 2.4 → 2.5 → 2.6 → rest of Phase 2 → Phase 3 (logo starts as soon as the name is chosen) → Phase 4.
+1.1–1.2 → 1.0 naming → 1.3–1.11 (1.10 spikes decide go/no-go) → 2.1 → 2.4 → 2.5 → 2.6 → rest of Phase 2 → Phase 3 (logo starts as soon as the name is chosen) → Phase 4.
 
-## Owner decisions (2026-11-01)
+## Key decisions
 
-- Name: SilkMic. Repo: public `delwerhossain/SilkMic`; Claude may commit (as delwerhossain) and push work branches on its own; `main` stays release-ready.
-- Brand colour: silk violet / lavender on graphite glass.
-- Phase 0 approved.
-- Steps that need the owner (admin password, permission prompts, hardware tests) are batched and asked at checkpoints.
+- **Name:** SilkMic (see `docs/NAMING.md` for how it was chosen).
+- **Brand:** silk violet on graphite glass (see `docs/DESIGN.md` and `design/logo/BRAND.md`).
+- **Distribution:** GitHub Releases DMG without a paid Apple Developer ID for now; the app installs its own virtual mic driver on first launch.
+- **Dictation:** English on Apple's on-device engine (no download); Bengali script through an optional whisper.cpp model, so the app stays small for everyone else.
+- **`main` stays release-ready:** small commits, each one builds and passes tests.
 
-## Working method (how each task is done)
+## Status (2026-11)
 
-- **Before a task:** re-read the relevant PRD/TRD section; if a fact is uncertain (API behaviour, macOS version detail, library licence), research it first (web search, Apple docs, upstream source via `gh`), and record the result in the doc or `docs/benchmarks.md`.
-- **Skills used per area** (loaded when the task starts; new skills may be installed when a gap is found, and recorded here):
-  - Git: `git-commit` before every commit/push/release.
-  - Planning/quality: `superpowers:writing-plans`, `superpowers:test-driven-development`, `superpowers:systematic-debugging`, `superpowers:verification-before-completion`, `superpowers:requesting-code-review`.
-  - Design: `logo-design` (logo, icon), `anthropic-skills:frontend-design` / `artifact-design` (mockups), `codex-image` only for raster mockups if needed.
-  - Docs/release: `engineering:documentation` (README), `engineering:deploy-checklist` (release).
-  - Code search in large upstream code: `codebase-memory` MCP.
-- **Done means verified:** build passes, tests pass, and the task's done-check in this file is met; otherwise the task stays ◐ with a note.
-- **Commits:** small, one topic each, as delwerhossain (see `git-commit` skill); work on `main-app`, push to `delwerhossain/SilkMic`.
-- **Owner checkpoints:** admin password, permission prompts, logo choice, hardware tests (QCY, WhatsApp) — batched and asked together.
-
-## Progress log
-
-- 2026-11-01: Phase 0 done (owner's voice test pending). Repo `delwerhossain/SilkMic` created. 1.3 rename done (966 app tests pass) — remaining: own Sparkle EdDSA key (needs owner keychain, 1.8). 1.4 driver imported, renamed, new factory UUID, C tests pass, builds — remaining: keepalive, install test (owner password). 1.5 VoiceCore package, 240 tests pass. 1.6 README + NOTICE done — remaining: in-app Acknowledgements and About notices.
-- 2026-11-01 (later): 1.4 driver keepalive done (C tests + app sender; live test pending owner password). 1.6 About/Acknowledgements done (licence texts in app). 3.1 logo kit done (Hush Capsule, Silk Violet, app icon, menu-bar icon, favicon set; state icons drafted). 1.11 brand + voice-state tokens and accent colour done; full token pass continues with Phase 3 UI. App tests: 966 pass.
-- 2026-11-01 (later): FineTune and NoNoise login items removed and both apps quit (part of 4.4 undo of Phase 0); SilkMic is the only login item. Old NoNoise driver still installed (remove in migration, F24).
-- 2026-11-01 (later): Dictation shipped on Apple SpeechAnalyzer (English 0 MB extra; Bangla bn-IN works but outputs Latin letters). Decision: Bengali-script output is an **optional download** in Settings (first try Apple engine + IndicXlit transliteration ~40 MB; fallback Whisper-medium Bangla ~500 MB). App download stays small.
+- Done: fork and rename, virtual mic driver with keepalive, Clean Mic (DeepFilterNet3) with Light/Balanced/Strong/Max, mic choice by stable device ID with Bluetooth recovery, default-input lock, launch at login, device alerts, notch panel, Control Center-style UI, dictation (English + optional Bengali), in-app driver install, DMG release workflow.
+- Next: Mute Everywhere, Mic Check, Hi-Fi Saver warning, raw-mic detector, uninstall button, menu-bar state icons, Sparkle update key.

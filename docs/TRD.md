@@ -192,7 +192,7 @@ Reliability
 3. Does a personal Homebrew tap accept a non-notarized cask? (verify).
 4. Apple Sound Isolation AU latency/quality as a second engine (measure).
 5. Dynamic Island Macs: notch geometry (test on hardware); detect the cutout by geometry, since `safeAreaInsets.top > 0` may also be true there.
-6. Bangla dictation: real WER on owner's voice notes (benchmark).
+6. Bangla dictation: real WER on real voice notes (benchmark).
 7. Sparkle self-update without a Team ID: does macOS 26/27 show the App Management prompt?
 8. Echo Guard reference: is the call app's per-app tap enough as AEC far-end reference, and how to detect apps that already run VPIO/WebRTC AEC?
 

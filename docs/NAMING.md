@@ -22,4 +22,4 @@ EUIPO eSearch + WIPO Global Brand Database by hand; check @handles on X/Instagra
 
 ## Decision
 
-**SilkMic** — chosen by the owner on 2026-11-01. Tagline: "SilkMic — clean voice, smart audio for Mac."
+**SilkMic** — chosen on 2026-11-01. Tagline: "SilkMic — clean voice, smart audio for Mac."

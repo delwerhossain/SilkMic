@@ -39,3 +39,6 @@ scripts/spikes/
 
 # Local renders
 design/logo/renders/
+
+# Personal working notes (local only)
+docs/CONTEXT.md

@@ -1,6 +1,6 @@
 # PRD — SilkMic
 
-Status: draft v1 · 2026-11-01 · Owner: Delwer Hossain
+Status: draft v1 · 2026-11-01 · Author: Delwer Hossain
 Name: **SilkMic** (decided 2026-11-01, see `docs/NAMING.md`).
 Research basis: `docs/RESEARCH.md` (5 research passes + adversarial fact-check, 2026-11-01).
 
@@ -10,7 +10,7 @@ A free, open-source, on-device Mac menu-bar app that makes your voice sound clea
 
 One-line pitch: **"Free SoundSource + Krisp for Mac, on-device."**
 
-The app started from the owner's own daily problem: switching between the MacBook mic and Bluetooth earbuds (QCY) while sending WhatsApp voice notes and taking calls, and the voice reaching the other side with background noise — or not at all.
+The app started from the author's own daily problem: switching between the MacBook mic and Bluetooth earbuds (QCY) while sending WhatsApp voice notes and taking calls, and the voice reaching the other side with background noise — or not at all.
 
 ## 2. Target users
 
@@ -32,7 +32,7 @@ Evidence links are in `docs/RESEARCH.md`.
 |---|---|---|---|---|
 | P1 | "My AirPods/earbuds sound terrible on calls" — using the earbud mic forces Bluetooth into low-quality call mode, and macOS re-picks the earbud mic on every reconnect | HN thread 223 pts/309 comments; Apple Community threads; paid single-purpose apps (SoundAnchor, AudioWrangler, ToothFairy); FineTune #342 #428 #459 | Keep the input on the built-in (or chosen) mic while earbuds are the output, automatically | F3 Hi-Fi Saver, F2 Smart Mic |
 | P2 | "People hear my fan/street/keyboard" in calls and voice notes | Krisp $8–16/mo; Apple Voice Isolation only in apps that support it | AI noise removal on a virtual mic that every app uses automatically | F1 Clean Mic |
-| P3 | "My voice disappears" or "the noise is back" after changing mics | Owner's own NoNoise/FineTune setup; NoNoise #19 #20 | Mic chosen by stable device ID from a priority list; never captures from itself; self-healing | F2 Smart Mic, F9 Self-repair |
+| P3 | "My voice disappears" or "the noise is back" after changing mics | The author's own NoNoise + FineTune setup; NoNoise #19 #20 | Mic chosen by stable device ID from a priority list; never captures from itself; self-healing | F2 Smart Mic, F9 Self-repair |
 | P4 | "Am I muted?" — no Mac has a mic-mute key | 7+ single-purpose mute apps; FineTune #341 #104 | One global mute with clear state and a "you're talking while muted" alert | F4 Mute Everywhere |
 | P5 | "Which mic is live and how do I sound?" | FineTune #417 | Live level meter + 5-second before/after test | F5 Mic Check |
 | P6 | No per-app volume or output on macOS | FineTune ~10k stars, ~330k downloads | Per-app volume, mute and output device | F6 App Mixer |
@@ -141,7 +141,7 @@ Priority: **P0 = MVP (v1.0)**, P1 = v1.x, P2 = v2.
 | Latency | ≤ 90 ms added, target 60 ms (DeepFilterNet3 adds 40 ms itself) |
 | First word | Cleaned audio ≤ 150 ms after an app starts recording (model stays loaded; only capture stops when idle) |
 | Startup | Menu-bar ready < 1 s after login |
-| Reliability | Dogfood metric (no telemetry): zero crashes and zero silent-mic incidents in 2 weeks of owner use; local crash logs via "Copy diagnostics" |
+| Reliability | Dogfood metric (no telemetry): zero crashes and zero silent-mic incidents in 2 weeks of daily use; local crash logs via "Copy diagnostics" |
 | Localization | English and Bangla UI (String Catalog) |
 | Accessibility | Every control has a VoiceOver label; panel and mixer fully keyboard-navigable |
 | Privacy | No audio leaves the Mac; no analytics |
@@ -169,7 +169,7 @@ Priority: **P0 = MVP (v1.0)**, P1 = v1.x, P2 = v2.
 
 - Product: S1–S7 pass on the test matrix; NFR targets met.
 - Adoption (6 months after launch): GitHub stars, release downloads, issues closed vs opened.
-- Owner: daily use on own Mac without manual fixes for 2 weeks before public launch.
+- Daily use on real Macs without manual fixes for 2 weeks before public launch.
 
 ## 12. Risks
 

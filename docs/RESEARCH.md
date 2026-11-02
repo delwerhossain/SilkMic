@@ -95,11 +95,11 @@ Do not build: meeting recorder / AI notes / accounts, Loopback-style routing gra
 | 3 | Dictation (English/Bangla), Studio clean | 3–4 weeks |
 | Launch | Video demo, brew cask, HN/Reddit/PH | 1 week |
 
-Needs from the owner: Apple Developer account ($99/yr), app name, GitHub account for the repo, decision on fork vs contributing upstream to FineTune.
+Open questions at this stage: Apple Developer account ($99/yr) or not, the app name, and whether to fork FineTune or contribute upstream.
 
-## 8. Decisions (2026-11-01, owner)
+## 8. Decisions (2026-11-01)
 
-- **No Apple Developer account for now.** Distribute from GitHub Releases: `.dmg` (drag to Applications) + `.zip`, with a one-time "Open Anyway" guide (System Settings → Privacy & Security). Sign every build with one stable self-signed certificate so macOS keeps the mic permission across updates (ad-hoc signing loses it). Sparkle updates with its own EdDSA key. Official Homebrew cask is not possible without notarization; a personal tap may work (to verify). Driver installs via the first-run helper (admin password once), like NoNoise today.
+- **No Apple Developer account for now.** Distribute from GitHub Releases: `.dmg` (drag to Applications) + `.zip`, with a one-time "Open Anyway" guide (System Settings → Privacy & Security). Sign every build with one stable self-signed certificate so macOS keeps the mic permission across updates (ad-hoc signing loses it). Sparkle updates with its own EdDSA key. Official Homebrew cask is not possible without notarization; a personal tap may work (to verify). Driver installs via the first-run helper (admin password once).
 - **One project, three platforms, Mac first.** Shared engine in Rust (DeepFilterNet's reference code is Rust; also WebRTC APM, whisper.cpp) built as a library. Native shell per OS:
   - macOS: Swift/SwiftUI — Liquid Glass, notch, Core Audio, HAL virtual mic (best experience).
   - Linux: PipeWire virtual source + filter (easiest port), small tray UI.
