@@ -48,6 +48,23 @@ final class NotchController {
             }
         }
         rebuild()
+        // silkmic://open-notch (used by scripts/screenshots.sh): show the panel for a few seconds.
+        showObserver = NotificationCenter.default.addObserver(forName: .silkMicOpenNotch, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in await self?.showBriefly() }
+        }
+    }
+
+    private var showObserver: NSObjectProtocol?
+
+    private func showBriefly() async {
+        guard isEnabled, !isOpen else { return }
+        await open()
+        closeTask?.cancel()
+        closeTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(6))
+            guard !Task.isCancelled else { return }
+            await self?.close()
+        }
     }
 
     // MARK: - Geometry
@@ -183,11 +200,6 @@ struct NotchVoiceView: View {
             .background(NotchGlassLight())
             .environment(\.silkGlassStyle, .clear)
             .environment(\.colorScheme, .dark)
-            // The notch panel never takes focus (typing stays in your app), so tell SwiftUI to
-            // draw it as active anyway: full Liquid Glass and coloured switches, not the dimmed
-            // inactive-window look.
-            .environment(\.appearsActive, true)
-            .environment(\.controlActiveState, .key)
     }
 }
 

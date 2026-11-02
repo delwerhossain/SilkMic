@@ -13,6 +13,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     /// Keeps the SilkMic virtual mic usable only while this app runs (see VirtualMicKeepalive).
     let virtualMicKeepalive = VirtualMicKeepalive()
 
+    /// Shows the menu-bar popup under the SilkMic icon, as a click on the icon would.
+    private func showPopup() {
+        guard let popup = NSApp.windows.first(where: { $0.className.contains("FluidMenuBarExtraWindow") }),
+              let icon = NSApp.windows.first(where: {
+                  $0.className.contains("StatusBarWindow") && $0.frame.minY >= 0 && NSScreen.main?.frame.contains($0.frame.origin) == true
+              }) else { return }
+        let x = min(icon.frame.minX, (icon.screen?.visibleFrame.maxX ?? icon.frame.maxX) - popup.frame.width - 8)
+        popup.setFrameTopLeftPoint(NSPoint(x: x, y: icon.frame.minY - 4))
+        popup.makeKeyAndOrderFront(nil)
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         virtualMicKeepalive.start()
         // First launch of a downloaded copy (or an update with a newer driver): install the mic.
@@ -22,6 +33,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
+        // UI actions (also used by scripts/screenshots.sh): silkmic://open-popup, open-settings, open-notch, close-windows
+        let uiURLs = urls.filter { $0.scheme == "silkmic" && ["open-popup", "open-settings", "open-notch", "close-windows"].contains($0.host ?? "") }
+        for url in uiURLs {
+            if url.host == "open-popup" {
+                showPopup()
+            } else if url.host == "close-windows" {
+                NSApp.windows.filter { $0.className.contains("FluidMenuBarExtraWindow") }.forEach { $0.resignKey(); $0.orderOut(nil) }
+                NSApp.windows.filter { $0.title.contains("Settings") }.forEach { $0.close() }
+            } else if url.host == "open-notch" {
+                NotificationCenter.default.post(name: .silkMicOpenNotch, object: nil)
+            } else {
+                NotificationCenter.default.post(name: .silkMicOpenSettings, object: nil)
+            }
+        }
+        let urls = urls.filter { !uiURLs.contains($0) }
+        guard !urls.isEmpty else { return }
         guard let audioEngine = audioEngine else {
             return
         }
@@ -280,4 +307,10 @@ struct SilkMicApp: App {
             }
         }
     }
+}
+
+extension Notification.Name {
+    /// Asks the menu-bar popup (which owns SwiftUI's openSettings action) to open Settings.
+    static let silkMicOpenSettings = Notification.Name("app.silkmic.openSettings")
+    static let silkMicOpenNotch = Notification.Name("app.silkmic.openNotch")
 }

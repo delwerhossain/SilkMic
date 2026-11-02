@@ -161,6 +161,9 @@ struct MenuBarPopupView: View {
             // before the popup is actually shown, and setting isVisible here
             // would suppress the HUD on the first media key at cold launch.
         }
+        .onReceive(NotificationCenter.default.publisher(for: .silkMicOpenSettings)) { _ in
+            openSettingsWindow()
+        }
         .onChange(of: audioEngine.outputDevices) { _, _ in
             if isEditingDevicePriority && !wasEditingInputDevices {
                 mergeDeviceChanges(from: audioEngine.outputDevices)
