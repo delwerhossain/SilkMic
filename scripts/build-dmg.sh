@@ -1,38 +1,42 @@
 #!/bin/bash
-set -e
+# Builds a release DMG of SilkMic without an Apple Developer ID: Release build, the virtual-mic
+# driver bundled inside the app (installed by the app on first launch), ad-hoc signature, and a
+# drag-to-Applications disk image. Used locally and by .github/workflows/release.yml.
+#
+#   scripts/build-dmg.sh            # version from the Xcode project
+#   scripts/build-dmg.sh 1.0.0      # override the version
+set -euo pipefail
+cd "$(dirname "$0")/.."
 
-# SilkMic DMG Build Script
-# Requires: Xcode, Node.js 18+, GraphicsMagick, ImageMagick
-# Install dependencies: brew install graphicsmagick imagemagick
+VERSION="${1:-$(grep -m1 'MARKETING_VERSION' SilkMic.xcodeproj/project.pbxproj | sed 's/.*= \(.*\);/\1/')}"
+BUILD="build/release"
+APP="$BUILD/Build/Products/Release/SilkMic.app"
+DMG="build/SilkMic-$VERSION.dmg"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-BUILD_DIR="$PROJECT_DIR/build"
+echo "==> SilkMic $VERSION"
+rm -rf "$BUILD" "$DMG"
 
-echo "==> Cleaning build directory..."
-rm -rf "$BUILD_DIR"
-mkdir -p "$BUILD_DIR"
+echo "==> Building the virtual mic driver"
+Driver/build-driver.sh >/dev/null
 
-echo "==> Building release archive..."
-xcodebuild -project "$PROJECT_DIR/SilkMic.xcodeproj" \
-    -scheme SilkMic \
-    -configuration Release \
-    -archivePath "$BUILD_DIR/SilkMic.xcarchive" \
-    archive
+echo "==> Building the app (Release)"
+xcodebuild -project SilkMic.xcodeproj -scheme SilkMic -configuration Release \
+  -destination 'platform=macOS,arch=arm64' -derivedDataPath "$BUILD" \
+  MARKETING_VERSION="$VERSION" \
+  CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
+  build | grep -E ' error:|BUILD (SUCCEEDED|FAILED)'
 
-echo "==> Exporting notarized app..."
-xcodebuild -exportArchive \
-    -archivePath "$BUILD_DIR/SilkMic.xcarchive" \
-    -exportPath "$BUILD_DIR" \
-    -exportOptionsPlist "$PROJECT_DIR/ExportOptions.plist"
+echo "==> Bundling the driver and signing (ad-hoc)"
+cp -R Driver/build/SilkMicDriver.driver "$APP/Contents/Resources/"
+codesign --force --deep --sign - --entitlements SilkMic/SilkMic.entitlements "$APP"
+codesign --verify --deep --strict "$APP"
 
-echo "==> Creating DMG..."
-# create-dmg auto-generates professional layout with:
-# - App icon composited onto disk icon
-# - "Drag to Applications" layout
-# - Code signing
-npx create-dmg "$BUILD_DIR/SilkMic.app" "$BUILD_DIR" --overwrite
+echo "==> Creating the disk image"
+STAGE="$BUILD/dmg"
+mkdir -p "$STAGE"
+cp -R "$APP" "$STAGE/"
+ln -s /Applications "$STAGE/Applications"
+hdiutil create -volname "SilkMic $VERSION" -srcfolder "$STAGE" -fs HFS+ -format UDZO -ov "$DMG" >/dev/null
 
-echo "==> Done!"
-echo "DMG created at: $BUILD_DIR/"
-ls -la "$BUILD_DIR"/*.dmg
+shasum -a 256 "$DMG" | tee "$DMG.sha256"
+echo "==> $DMG"
