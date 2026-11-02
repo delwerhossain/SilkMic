@@ -20,6 +20,8 @@ jobs:
   build:
     runs-on: macos-26
     timeout-minutes: 30
+    env:
+      HAS_SIGNING_CERT: ${{ secrets.SIGNING_P12_BASE64 != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,8 +39,32 @@ jobs:
             echo "VERSION=$(grep -m1 'MARKETING_VERSION' SilkMic.xcodeproj/project.pbxproj | sed 's/.*= \(.*\);/\1/')" >> "$GITHUB_ENV"
           fi
 
+      - name: Install dmgbuild
+        run: pipx install dmgbuild || python3 -m pip install --user --break-system-packages dmgbuild
+
+      # Optional: the "SilkMic Self-Signed" certificate (secrets SIGNING_P12_BASE64 and
+      # SIGNING_P12_PASSWORD). With it, macOS keeps people's permissions across updates.
+      - name: Import signing certificate
+        env:
+          P12: ${{ secrets.SIGNING_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.SIGNING_P12_PASSWORD }}
+        if: env.HAS_SIGNING_CERT == 'true'
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 16)"
+          echo "$P12" | base64 --decode > "$RUNNER_TEMP/signing.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/signing.p12" -P "$P12_PASSWORD" -k "$KEYCHAIN" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          rm -f "$RUNNER_TEMP/signing.p12"
+
       - name: Build DMG
-        run: scripts/build-dmg.sh "$VERSION"
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          scripts/build-dmg.sh "$VERSION"
 
       - name: Upload test build
         if: github.event_name == 'workflow_dispatch'
