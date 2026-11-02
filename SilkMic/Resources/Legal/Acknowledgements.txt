@@ -6,7 +6,8 @@ terms of the GNU General Public License version 3 (see LICENSE). It comes with
 NO WARRANTY, to the extent permitted by law.
 
 SilkMic is a modified version of FineTune. Modified by Delwer Hossain, 2026
-(renamed, rebranded, and extended with voice-cleaning features).
+(renamed, rebranded, and extended with Clean Mic noise removal, a virtual microphone,
+dictation, a notch panel and a new design).
 
 -------------------------------------------------------------------------------
 Upstream projects
@@ -19,7 +20,7 @@ License: GNU General Public License v3.0
 NoNoise Mac — https://github.com/ivalsaraj/NoNoise-Mac
 Copyright (c) 2025 Ghostkwebb (original MetalVoice project)
 Copyright (c) 2026 ivalsaraj (NoNoise Mac)
-License: MIT (full text in Licenses/NoNoise-MIT.txt once imported)
+License: MIT (full text in Licenses/NoNoise-MIT.txt)
 
 -------------------------------------------------------------------------------
 Third-party packages
