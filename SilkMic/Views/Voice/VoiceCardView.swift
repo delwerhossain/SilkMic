@@ -5,6 +5,9 @@ import SwiftUI
 /// in one container, colour only on what is active. Used in the menu-bar popup and the notch panel.
 struct VoiceCardView: View {
     @Bindable var voice: VoiceController
+    /// Notch layout: microphone and output pickers side by side, the Clean Mic switch inside the
+    /// noise module. The menu-bar popup keeps its own output list, so it leaves this off.
+    var showsOutput = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let tileRadius: CGFloat = 22
@@ -14,8 +17,13 @@ struct VoiceCardView: View {
         glassGroup {
             VStack(spacing: spacing) {
                 HStack(spacing: spacing) {
-                    cleanTile
-                    micTile
+                    if showsOutput {
+                        micTile
+                        outputTile
+                    } else {
+                        cleanTile
+                        micTile
+                    }
                 }
                 strengthModule
             }
@@ -57,32 +65,55 @@ struct VoiceCardView: View {
 
     /// Mic tile: which physical mic is being cleaned; click to choose another.
     private var micTile: some View {
+        deviceTile(title: "Microphone", icon: "mic.fill", current: currentMicName,
+                   items: voice.sourceMics.map { ($0.id, $0.name) },
+                   selectedID: voice.selectedSourceMicID) { voice.selectSourceMic(uid: $0) }
+    }
+
+    /// Output tile: the system speaker or headphones; click to switch.
+    private var outputTile: some View {
+        let devices = voice.outputDevices
+        let current = devices.first { $0.uid == voice.defaultOutputUID }?.name ?? "None"
+        return deviceTile(title: "Output", icon: outputIcon(for: current), current: current,
+                          items: devices.map { ($0.uid, $0.name) },
+                          selectedID: voice.defaultOutputUID ?? "") { uid in
+            if let device = devices.first(where: { $0.uid == uid }) { voice.selectOutput(device) }
+        }
+    }
+
+    /// A Control Center–style tile that opens a device menu (current device ticked).
+    private func deviceTile(title: String, icon: String, current: String,
+                            items: [(id: String, name: String)], selectedID: String,
+                            select: @escaping (String) -> Void) -> some View {
         Menu {
-            ForEach(voice.sourceMics, id: \.id) { mic in
+            ForEach(items, id: \.id) { item in
                 Button {
-                    voice.selectSourceMic(uid: mic.id)
+                    select(item.id)
                 } label: {
-                    if mic.id == voice.selectedSourceMicID {
-                        Label(mic.name, systemImage: "checkmark")
+                    if item.id == selectedID {
+                        Label(item.name, systemImage: "checkmark")
                     } else {
-                        Text(mic.name)
+                        Text(item.name)
                     }
                 }
             }
         } label: {
             HStack(spacing: 10) {
-                iconCircle(systemName: "mic.fill", active: false)
+                iconCircle(systemName: icon, active: false)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Microphone")
+                    Text(title)
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.primary)
-                    Text(currentMicName)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+                    Text(current)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.primary.opacity(0.62))
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
                 Spacer(minLength: 0)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.primary.opacity(0.4))
             }
             .padding(10)
             .frame(maxWidth: .infinity, minHeight: 58)
@@ -92,29 +123,54 @@ struct VoiceCardView: View {
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .silkGlassCard(cornerRadius: tileRadius, interactive: true)
-        .accessibilityLabel("Microphone: \(currentMicName)")
+        .help(current)
+        .accessibilityLabel("\(title): \(current)")
+    }
+
+    private func outputIcon(for name: String) -> String {
+        let lower = name.lowercased()
+        if lower.contains("airpods") { return "airpods" }
+        if ["buds", "headphone", "headset", "earphone", "qcy"].contains(where: lower.contains) { return "headphones" }
+        if lower.contains("display") || lower.contains("tv") || lower.contains("hdmi") { return "tv" }
+        return "speaker.wave.2.fill"
     }
 
     /// Like Control Center's Display/Sound sliders: one glass capsule, the chosen level is a
     /// bright pill that slides between positions.
     private var strengthModule: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Noise Removal")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .padding(.leading, 4)
+            HStack {
+                if showsOutput {
+                    Image(systemName: voice.cleanEnabled ? "waveform" : "waveform.slash")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(voice.cleanEnabled ? SilkPalette.violet : Color.primary.opacity(0.6))
+                        .symbolEffect(.variableColor.iterative, options: .repeating, isActive: voice.cleanEnabled && !reduceMotion)
+                }
+                Text(showsOutput ? "Clean Mic" : "Noise Removal")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(showsOutput ? .primary : .secondary)
+                Spacer(minLength: 0)
+                if showsOutput {
+                    Toggle("Clean Mic", isOn: $voice.cleanEnabled)
+                        .toggleStyle(.switch)
+                        .controlSize(.mini)
+                        .labelsHidden()
+                        .tint(SilkPalette.violet)
+                }
+            }
+            .padding(.horizontal, 4)
             HStack(spacing: 2) {
                 ForEach(NoiseStrength.allCases) { level in
                     strengthSegment(level)
                 }
             }
             .padding(3)
-            .background(Capsule().fill(Color.primary.opacity(0.06)))
+            .background(Capsule().fill(Color.primary.opacity(0.07)))
+            .disabled(!voice.cleanEnabled)
+            .opacity(voice.cleanEnabled ? 1 : 0.45)
         }
         .padding(10)
         .silkGlassCard(cornerRadius: tileRadius)
-        .disabled(!voice.cleanEnabled)
-        .opacity(voice.cleanEnabled ? 1 : 0.5)
     }
 
     @Namespace private var strengthNamespace
@@ -126,7 +182,7 @@ struct VoiceCardView: View {
         } label: {
             Text(level.title)
                 .font(.system(size: 12, weight: selected ? .semibold : .medium, design: .rounded))
-                .foregroundStyle(selected ? Color.black.opacity(0.85) : Color.primary.opacity(0.7))
+                .foregroundStyle(selected ? Color.black.opacity(0.85) : Color.primary.opacity(0.78))
                 .frame(maxWidth: .infinity, minHeight: 26)
                 .background {
                     if selected {

@@ -91,6 +91,23 @@ final class VoiceController {
         selectedSourceMicID = uid
     }
 
+    // MARK: - Output (for the notch panel)
+
+    /// Speakers and headphones people can switch to (SilkMic's own devices and helper aggregates hidden).
+    var outputDevices: [AudioDevice] {
+        (audioEngine?.outputDevices ?? []).filter {
+            !SilkMicDeviceFilter.isVirtualMic(uid: $0.uid, name: $0.name)
+                && !SilkMicDeviceFilter.isHelperAggregate(name: $0.name)
+        }
+    }
+
+    var defaultOutputUID: String? { audioEngine?.deviceVolumeMonitor.defaultDeviceUID }
+
+    /// Makes `device` the system output (apps that follow the default move with it).
+    func selectOutput(_ device: AudioDevice) {
+        audioEngine?.setDefaultOutputDevice(device.id)
+    }
+
     init(audioEngine: AudioEngine) {
         let defaults = UserDefaults.standard
         cleanEnabled = defaults.object(forKey: Keys.cleanEnabled) as? Bool ?? true

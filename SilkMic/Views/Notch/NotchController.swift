@@ -170,15 +170,41 @@ final class NotchTriggerView: NSView {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
-/// Content of the notch panel: the Clean Mic card on dark glass, sized for the notch.
+/// Content of the notch panel: microphone, output and Clean Mic on clear, water-like glass over
+/// the black notch background, sized for the notch.
 struct NotchVoiceView: View {
     let voice: VoiceController
 
     var body: some View {
-        VoiceCardView(voice: voice)
+        VoiceCardView(voice: voice, showsOutput: true)
             .frame(width: 340)
             .padding(.horizontal, 8)
             .padding(.bottom, 8)
+            .background(NotchGlassLight())
+            .environment(\.silkGlassStyle, .clear)
             .environment(\.colorScheme, .dark)
+    }
+}
+
+/// Faint light under the tiles so the clear glass has something to bend; the panel stays black.
+private struct NotchGlassLight: View {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    var body: some View {
+        if !reduceTransparency {
+            GeometryReader { proxy in
+                let size = proxy.size
+                ZStack {
+                    Ellipse().fill(Color.white.opacity(0.07))
+                        .frame(width: size.width * 0.7, height: size.height * 0.6).blur(radius: 30)
+                        .offset(x: -size.width * 0.18, y: -size.height * 0.12)
+                    Ellipse().fill(SilkPalette.violet.opacity(0.10))
+                        .frame(width: size.width * 0.6, height: size.height * 0.5).blur(radius: 36)
+                        .offset(x: size.width * 0.22, y: size.height * 0.2)
+                }
+                .frame(width: size.width, height: size.height)
+            }
+            .allowsHitTesting(false)
+        }
     }
 }

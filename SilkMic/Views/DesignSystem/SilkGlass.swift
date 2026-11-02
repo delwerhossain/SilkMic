@@ -80,18 +80,36 @@ extension View {
     }
 }
 
+/// `.clear` is the see-through, water-like glass of Control Center tiles (used on the black notch
+/// panel); `.regular` is the frostier default.
+enum SilkGlassStyle {
+    case regular
+    case clear
+}
+
+extension EnvironmentValues {
+    @Entry var silkGlassStyle: SilkGlassStyle = .regular
+}
+
 private struct SilkGlassCardModifier: ViewModifier {
     let cornerRadius: CGFloat
     let tint: Color?
     let interactive: Bool
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.silkGlassStyle) private var style
 
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         if reduceTransparency {
             content.background(shape.fill(Color(nsColor: .controlBackgroundColor)))
         } else if #available(macOS 26.0, *) {
-            content.glassEffect(glass, in: shape)
+            if style == .clear {
+                content
+                    .glassEffect(glass, in: shape)
+                    .overlay(WaterRim(shape: shape))
+            } else {
+                content.glassEffect(glass, in: shape)
+            }
         } else {
             content
                 .background(shape.fill(.ultraThinMaterial))
@@ -101,10 +119,31 @@ private struct SilkGlassCardModifier: ViewModifier {
 
     @available(macOS 26.0, *)
     private var glass: Glass {
-        var g = Glass.regular
+        var g = style == .clear ? Glass.clear.tint(Color.white.opacity(0.07)) : Glass.regular
         if let tint { g = g.tint(tint) }
         if interactive { g = g.interactive() }
         return g
+    }
+}
+
+/// Bright edge light along the top-left and a fainter one bottom-right, like light caught in a
+/// drop of water. Gives clear glass its shape on a black background, where there is little to refract.
+private struct WaterRim<S: InsettableShape>: View {
+    let shape: S
+
+    var body: some View {
+        shape
+            .strokeBorder(
+                LinearGradient(
+                    stops: [
+                        .init(color: .white.opacity(0.42), location: 0),
+                        .init(color: .white.opacity(0.08), location: 0.45),
+                        .init(color: .white.opacity(0.04), location: 0.6),
+                        .init(color: .white.opacity(0.22), location: 1),
+                    ],
+                    startPoint: .topLeading, endPoint: .bottomTrailing),
+                lineWidth: 0.8)
+            .allowsHitTesting(false)
     }
 }
 
