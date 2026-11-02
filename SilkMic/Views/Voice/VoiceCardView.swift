@@ -152,10 +152,8 @@ struct VoiceCardView: View {
                 Spacer(minLength: 0)
                 if showsOutput {
                     Toggle("Clean Mic", isOn: $voice.cleanEnabled)
-                        .toggleStyle(.switch)
-                        .controlSize(.mini)
+                        .toggleStyle(SilkSwitchStyle())
                         .labelsHidden()
-                        .tint(SilkPalette.violet)
                 }
             }
             .padding(.horizontal, 4)
@@ -224,5 +222,31 @@ struct VoiceCardView: View {
         } else {
             content()
         }
+    }
+}
+
+/// A switch that keeps its colour when the window is not focused. The system switch turns grey in
+/// inactive windows, and the notch panel never takes focus from the app you are typing in.
+struct SilkSwitchStyle: ToggleStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        Button {
+            configuration.isOn.toggle()
+        } label: {
+            Capsule()
+                .fill(configuration.isOn ? AnyShapeStyle(SilkPalette.violet) : AnyShapeStyle(Color.white.opacity(0.18)))
+                .frame(width: 34, height: 20)
+                .overlay(alignment: configuration.isOn ? .trailing : .leading) {
+                    Circle()
+                        .fill(.white)
+                        .shadow(color: .black.opacity(0.25), radius: 1.5, y: 1)
+                        .padding(2)
+                }
+                .animation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.8), value: configuration.isOn)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(.isToggle)
+        .accessibilityValue(configuration.isOn ? "On" : "Off")
     }
 }
