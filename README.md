@@ -24,7 +24,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/notch.png" width="560" alt="SilkMic notch panel on a MacBook: switch microphone and output, turn Clean Mic on and pick the noise removal level">
+  <img src="docs/screenshots/notch.png" width="720" alt="SilkMic notch panel on a MacBook: switch microphone and output, turn Clean Mic on and pick the noise removal level">
   <br><sub><b>Notch panel:</b> hover the notch to switch mic and speakers and set Clean Mic</sub>
 </p>
 
