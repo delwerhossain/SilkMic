@@ -149,6 +149,8 @@ private struct PopupSizeTile: View {
 
             Text(size.description)
                 .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
+                .lineLimit(1)
+                .fixedSize()
                 .foregroundStyle(isSelected ? .primary : .secondary)
         }
         .contentShape(Rectangle())
