@@ -97,6 +97,8 @@ class DeepFilterNetDSP {
     // access to CoreML *output* arrays (produced on ANE/GPU under computeUnits=.all)
     // can read back as zeros/stale and silenced all output — see AGENTS.md.
     private var h_enc_buf: [Float]
+    /// Enhanced spectrum of the current hop (481 complex bins), reused every hop.
+    private var enhancedScratch = [Float](repeating: 0, count: 481 * 2)
     private var h_erb_buf: [Float]
     private var h_df_buf: [Float]
     
@@ -386,6 +388,37 @@ class DeepFilterNetDSP {
         }
     }
     
+    /// Writes `values` into a contiguous CPU-allocated Float16/Float32 input array.
+    private static func write(_ values: [Float], into array: MLMultiArray) {
+        let n = min(values.count, array.count)
+        values.withUnsafeBufferPointer { src in
+            switch array.dataType {
+            case .float16:
+                // dataPointer, not withUnsafeMutableBufferPointer(ofType: Float16.self): that
+                // needs macOS 15 and VoiceCore still supports 14.
+                let dst = array.dataPointer.assumingMemoryBound(to: Float16.self)
+                for i in 0..<n { dst[i] = Float16(src[i]) }
+            case .float32:
+                array.withUnsafeMutableBufferPointer(ofType: Float.self) { dst, _ in
+                    dst.baseAddress!.update(from: src.baseAddress!, count: n)
+                }
+            default:
+                for i in 0..<n { array[i] = NSNumber(value: src[i]) }
+            }
+        }
+    }
+
+    /// Reads a Core ML output array (any float type, any strides) into `values` in row-major order.
+    private static func read(_ array: MLMultiArray, into values: inout [Float]) {
+        let shaped = MLShapedArray<Float>(converting: array)
+        shaped.withUnsafeShapedBufferPointer { src, _, _ in
+            let n = min(values.count, src.count)
+            values.withUnsafeMutableBufferPointer { dst in
+                dst.baseAddress!.update(from: src.baseAddress!, count: n)
+            }
+        }
+    }
+
     private func processHop(frame: [Float]) {
         frameCount += 1
         
@@ -483,10 +516,12 @@ class DeepFilterNetDSP {
                     for i in 0..<min(ptr.count, featScratch.count) { ptr[i] = featScratch[i] }
                 }
                 
-                // Copy States (Float -> Float16 via NSNumber; proven model-I/O path)
-                for i in 0..<h_enc_buf.count { hEncMulti[i] = NSNumber(value: h_enc_buf[i]) }
-                for i in 0..<h_erb_buf.count { hErbMulti[i] = NSNumber(value: h_erb_buf[i]) }
-                for i in 0..<h_df_buf.count { hDfMulti[i] = NSNumber(value: h_df_buf[i]) }
+                // Copy States (Float -> Float16). These input arrays are our own contiguous CPU
+                // allocations, so writing their storage directly is safe; it replaces a boxed
+                // NSNumber per element (thousands of allocations per hop on the audio thread).
+                Self.write(h_enc_buf, into: hEncMulti)
+                Self.write(h_erb_buf, into: hErbMulti)
+                Self.write(h_df_buf, into: hDfMulti)
                 
                 let input = DeepFilterNet3_StreamingInput(spec_buf: specMulti, feat_erb_buf: erbMulti, feat_spec_buf: featMulti, h_enc_in: hEncMulti, h_erb_in: hErbMulti, h_df_in: hDfMulti)
                 
@@ -497,26 +532,21 @@ class DeepFilterNetDSP {
                 let oErb = output.h_erb_out
                 let oDf = output.h_df_out
                 
-                // Copy states back via NSNumber (CoreML output arrays — proven path)
-                if oEnc.count == h_enc_buf.count {
-                    for i in 0..<h_enc_buf.count { h_enc_buf[i] = oEnc[i].floatValue }
-                }
-                if oErb.count == h_erb_buf.count {
-                    for i in 0..<h_erb_buf.count { h_erb_buf[i] = oErb[i].floatValue }
-                }
-                if oDf.count == h_df_buf.count {
-                    for i in 0..<h_df_buf.count { h_df_buf[i] = oDf[i].floatValue }
-                }
+                // Copy states back. Core ML output arrays (made on ANE/GPU) may be Float16 with
+                // padded strides, and reading their raw buffer directly returned zeros before
+                // (see AGENTS.md). MLShapedArray(converting:) does a strided, type-converting copy
+                // in one call, so it is safe and avoids an NSNumber per element.
+                if oEnc.count == h_enc_buf.count { Self.read(oEnc, into: &h_enc_buf) }
+                if oErb.count == h_erb_buf.count { Self.read(oErb, into: &h_erb_buf) }
+                if oDf.count == h_df_buf.count { Self.read(oDf, into: &h_df_buf) }
                 
                 // enhanced_spec is the RAW enhanced complex spectrum, already in
                 // DeepFilterNet's wnorm scale — use it directly. NO de-normalization
                 // and NO de-compression (DFN applies neither; doing so attenuated
                 // high frequencies and muffled the voice).
-                // Read via NSNumber subscript: raw withUnsafeBufferPointer(ofType:
-                // Float16) on this ANE/GPU output reads back as zeros (silence). See AGENTS.md.
-                let enhanced = output.enhanced_spec
-                let zero = NSNumber(value: 0)
-                let one = NSNumber(value: 1)
+                // Converted in one strided copy (see the state copy above for why not raw).
+                // [1,1,1,481,2] row-major: bin i is at 2i (real) and 2i+1 (imaginary).
+                Self.read(output.enhanced_spec, into: &enhancedScratch)
 
                 // Blend the wet (enhanced) spectrum against the dry (original)
                 // spectrum held in rawSpecScratch, applying the attenuation floor
@@ -527,10 +557,9 @@ class DeepFilterNetDSP {
                 var actWeightSum: Float = 0     // Σ dryMag (energy weight)
                 var actValueSum: Float = 0      // Σ dryMag · binActivity
                 for i in 0..<481 {
-                    let iNum = NSNumber(value: i)
                     // enhanced is 5D [1,1,1,481,2] — enhanced complex spec (wet).
-                    let wetR = enhanced[[zero, zero, zero, iNum, zero] as [NSNumber]].floatValue
-                    let wetI = enhanced[[zero, zero, zero, iNum, one]  as [NSNumber]].floatValue
+                    let wetR = enhancedScratch[i * 2]
+                    let wetI = enhancedScratch[i * 2 + 1]
                     let (outR, outI) = Self.resolveOutputBin(
                         dryR: rawSpecScratch[i*2], dryI: rawSpecScratch[i*2 + 1],
                         wetR: wetR, wetI: wetI,
