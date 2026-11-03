@@ -110,7 +110,7 @@ struct MenuBarPopupView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
             if let voiceController {
-                VoiceCardView(voice: voiceController)
+                VoiceCardView(voice: voiceController, isVisible: popupVisibility.isVisible)
             }
             HStack(alignment: .top) {
                 deviceTabsHeader

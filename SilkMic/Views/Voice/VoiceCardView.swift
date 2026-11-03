@@ -8,6 +8,9 @@ struct VoiceCardView: View {
     /// Notch layout: microphone and output pickers side by side, the Clean Mic switch inside the
     /// noise module. The menu-bar popup keeps its own output list, so it leaves this off.
     var showsOutput = false
+    /// Whether the card is on screen. The menu-bar popup stays mounted while hidden, and a
+    /// repeating symbol animation there kept redrawing (about a third of a CPU core) for nothing.
+    var isVisible = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let tileRadius: CGFloat = 22
@@ -41,7 +44,7 @@ struct VoiceCardView: View {
         } label: {
             HStack(spacing: 10) {
                 iconCircle(systemName: voice.cleanEnabled ? "waveform" : "waveform.slash", active: voice.cleanEnabled)
-                    .symbolEffect(.variableColor.iterative, options: .repeating, isActive: voice.cleanEnabled && !reduceMotion)
+                    .symbolEffect(.variableColor.iterative, options: .repeating, isActive: voice.cleanEnabled && isVisible && !reduceMotion)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Clean Mic")
                         .font(.system(size: 13, weight: .semibold))
@@ -144,7 +147,7 @@ struct VoiceCardView: View {
                     Image(systemName: voice.cleanEnabled ? "waveform" : "waveform.slash")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(voice.cleanEnabled ? SilkPalette.violet : Color.primary.opacity(0.6))
-                        .symbolEffect(.variableColor.iterative, options: .repeating, isActive: voice.cleanEnabled && !reduceMotion)
+                        .symbolEffect(.variableColor.iterative, options: .repeating, isActive: voice.cleanEnabled && isVisible && !reduceMotion)
                 }
                 Text(showsOutput ? "Clean Mic" : "Noise Removal")
                     .font(.system(size: 12, weight: .semibold))
