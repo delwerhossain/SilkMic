@@ -11,8 +11,7 @@ public class AudioModel: NSObject, ObservableObject, AVCaptureAudioDataOutputSam
     // Published State for UI.
     // Defaults ON so NoNoise Mac is actively cancelling noise on first launch.
     @Published public var isAIEnabled: Bool = true {
-        didSet {
-        }
+        didSet { aiFlag.isOn = isAIEnabled }   // read by the render callback (see testToneFlag)
     }
     @Published public var inputDevices: [AVCaptureDevice] = [] // Changed to AVCaptureDevice
     @Published public var selectedInputDeviceID: String = "" { // IDs are Strings in AVCapture
@@ -91,7 +90,8 @@ public class AudioModel: NSObject, ObservableObject, AVCaptureAudioDataOutputSam
     
     @Published public var isPlayingTestTone: Bool = false {
         didSet {
-            // No action needed, source node checks this flag
+            // The render callback reads this plain flag, not the @Published property.
+            testToneFlag.isOn = isPlayingTestTone
         }
     }
     
@@ -298,6 +298,12 @@ public class AudioModel: NSObject, ObservableObject, AVCaptureAudioDataOutputSam
     // Processing Modules
     private let dspEngine = DeepFilterNetDSP()
     private let voiceChain = VoiceChain()
+    /// Test-tone switch read by the real-time render callback. A plain stored Bool (single-word
+    /// loads and stores) instead of the @Published property, whose getter runs Combine and
+    /// Objective-C machinery on the audio thread every callback.
+    private final class Flag: @unchecked Sendable { var isOn = false }
+    private let testToneFlag = Flag()
+    private let aiFlag: Flag = { let f = Flag(); f.isOn = true; return f }()
 
     // OPTIONAL — created only while the feature is enabled (DeepFilterNetDSP.init allocates
     // MLMultiArrays + async-loads the model; a stored non-optional instance would pay that at
@@ -314,6 +320,8 @@ public class AudioModel: NSObject, ObservableObject, AVCaptureAudioDataOutputSam
         let bufferRef = ringBuffer
         let dsp = dspEngine
         let chain = voiceChain
+        let testTone = testToneFlag
+        let ai = aiFlag
         
         playbackSourceNode = AVAudioSourceNode { [weak self] _, _, frameCount, audioBufferList -> OSStatus in
             let abl = UnsafeMutableAudioBufferListPointer(audioBufferList)
@@ -321,7 +329,7 @@ public class AudioModel: NSObject, ObservableObject, AVCaptureAudioDataOutputSam
             let count = Int(frameCount)
             
             // 1. Test Tone
-            if let self = self, self.isPlayingTestTone {
+            if testTone.isOn {
                  for i in 0..<count {
                      data[i] = Float.random(in: -0.1...0.1) 
                  }
@@ -348,7 +356,7 @@ public class AudioModel: NSObject, ObservableObject, AVCaptureAudioDataOutputSam
             var gain: Float = 1.0
             vDSP_vsmul(data, 1, &gain, data, 1, vDSP_Length(frameCount))
             
-            if let self = self, self.isAIEnabled {
+            if ai.isOn {
                 // DSP STFT Pipeline, then voice-polish chain (no-op when disabled).
                 dsp.process(input: data, count: count, output: data)
                 chain.process(data, count: count)

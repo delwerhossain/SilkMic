@@ -30,7 +30,6 @@ final class EQProcessor: BiquadProcessor, @unchecked Sendable {
 
     /// Update EQ settings (call from main thread).
     func updateSettings(_ settings: EQSettings) {
-        setEnabled(settings.isEnabled)
         _currentSettings = settings
 
         let coefficients = BiquadMath.coefficientsForAllBands(
@@ -43,6 +42,13 @@ final class EQProcessor: BiquadProcessor, @unchecked Sendable {
         }
 
         swapSetup(newSetup)
+
+        // A flat EQ (all bands 0 dB) is skipped: the default for every app, and running ten
+        // biquad sections per channel on it cost CPU for no audible change. Coming back from
+        // bypass starts from clean filter state so stale history cannot click.
+        let active = settings.isEnabled && settings.clampedGains.contains { abs($0) > 0.01 }
+        if active && !isEnabled { resetDelayBuffers() }
+        setEnabled(active)
 
         // Note: Do NOT reset delay buffers here - the filter naturally adapts to new
         // coefficients using existing state, producing smooth transitions without clicks.
