@@ -71,6 +71,8 @@ Your Mac's microphone hears everything: the fan, the keyboard, the street, the c
 
 **Privacy**
 - No account, no subscription, no cloud and no telemetry. Audio is processed on your Mac and never stored.
+- **Microphone only while you use it.** SilkMic opens your real mic only while an app (Zoom, Meet, WhatsApp...) is using the SilkMic microphone, or while you hold Fn to dictate.
+- **App audio only when you change it.** Apps left at 100 % volume, unmuted, on the system output and with a flat EQ play straight through macOS. SilkMic touches an app's audio only after you change its volume, output or EQ.
 
 ## Install
 
@@ -101,6 +103,12 @@ Yes. It is free and open source under GPL-3.0. There is no paid tier and no acco
 <summary><b>Does my voice go to a server?</b></summary>
 
 No. Noise removal and dictation run on your Mac. SilkMic does not send audio, text or usage data anywhere.
+</details>
+
+<details>
+<summary><b>Why does macOS show SilkMic using the microphone or recording audio?</b></summary>
+
+The orange microphone indicator appears while SilkMic cleans your mic for a call or dictation, and goes away when the call app closes the mic. The "system audio recording" indicator appears only while you have changed some app's volume, output or EQ (or turned on AutoEQ or loudness), because SilkMic then has to process that app's sound. Put every app back to its defaults and it goes away.
 </details>
 
 <details>
