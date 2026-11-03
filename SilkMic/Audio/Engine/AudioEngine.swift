@@ -37,6 +37,10 @@ final class AudioEngine {
     var pendingAliveWatcherCount: Int { aliveWatchers.count }
 
     private var appliedPIDs: Set<pid_t> = []
+    /// Taps waiting to be released after their app returned to defaults (see reconcileTap).
+    private var pendingTapRelease: [pid_t: Task<Void, Never>] = [:]
+    /// How long an unneeded tap lingers before release (internal so tests can shorten it).
+    var tapReleaseDelay: Duration = .seconds(3)
     private var appDeviceRouting: [pid_t: String] = [:]  // pid → deviceUID (always explicit)
     private var followsDefault: Set<pid_t> = []  // Apps that follow system default
     /// The last output default confirmed by SilkMic (user change or programmatic switch).
@@ -638,9 +642,7 @@ final class AudioEngine {
 
     func setVolume(for app: AudioApp, to volume: Float) {
         volumeState.setVolume(for: app.id, to: volume, identifier: app.persistenceIdentifier)
-        if let deviceUID = appDeviceRouting[app.id] {
-            ensureTapExists(for: app, deviceUID: deviceUID)
-        }
+        reconcileTap(for: app)
         if let tap = taps[app.id] {
             tap.volume = effectiveVolume(for: app.id, deviceUIDs: tap.currentDeviceUIDs)
             if settingsManager.appSettings.loudnessCompensationEnabled {
@@ -660,6 +662,7 @@ final class AudioEngine {
 
     func setBoost(for app: AudioApp, to boost: BoostLevel) {
         volumeState.setBoost(for: app.id, to: boost, identifier: app.persistenceIdentifier)
+        reconcileTap(for: app)
         if let tap = taps[app.id] {
             tap.volume = effectiveVolume(for: app.id, deviceUIDs: tap.currentDeviceUIDs)
         }
@@ -737,6 +740,7 @@ final class AudioEngine {
 
     func setMute(for app: AudioApp, to muted: Bool) {
         volumeState.setMute(for: app.id, to: muted, identifier: app.persistenceIdentifier)
+        reconcileTap(for: app)
         taps[app.id]?.isMuted = muted
     }
 
@@ -746,9 +750,9 @@ final class AudioEngine {
 
     /// Update EQ settings for an app
     func setEQSettings(_ settings: EQSettings, for app: AudioApp) {
-        guard let tap = taps[app.id] else { return }
-        tap.updateEQSettings(settings)
         settingsManager.setEQSettings(settings, for: app.persistenceIdentifier)
+        reconcileTap(for: app)   // a new tap starts with these settings
+        taps[app.id]?.updateEQSettings(settings)
     }
 
     /// Get EQ settings for an app
@@ -769,6 +773,7 @@ final class AudioEngine {
         } else {
             settingsManager.setAutoEQSelection(for: deviceUID, to: nil)
         }
+        reconcileAllTaps()
         applyAutoEQToTaps(for: deviceUID)
     }
 
@@ -776,6 +781,7 @@ final class AudioEngine {
         guard var selection = settingsManager.getAutoEQSelection(for: deviceUID) else { return }
         selection.isEnabled = enabled
         settingsManager.setAutoEQSelection(for: deviceUID, to: selection)
+        reconcileAllTaps()
         applyAutoEQToTaps(for: deviceUID)
     }
 
@@ -795,6 +801,7 @@ final class AudioEngine {
     }
 
     func setLoudnessCompensationEnabled(_ enabled: Bool) {
+        scheduleReconcileAllTaps()   // after the setting is saved: every app needs a tap while on
         for tap in taps.values {
             tap.updateLoudnessCompensation(volume: effectiveLoudnessVolume(for: tap), enabled: enabled)
         }
@@ -803,6 +810,7 @@ final class AudioEngine {
     func setLoudnessEqualizationEnabled(_ enabled: Bool) {
         var settings = LoudnessEqualizerSettings()
         settings.enabled = enabled
+        scheduleReconcileAllTaps()
         for tap in taps.values {
             tap.updateLoudnessEqualization(settings)
         }
@@ -898,6 +906,8 @@ final class AudioEngine {
     ///   - app: The app to route
     ///   - deviceUID: The device UID to route to, or nil to follow system default
     func setDevice(for app: AudioApp, deviceUID: String?) {
+        // Back on "System Audio" with nothing else changed: drop the tap (macOS routes it).
+        defer { if !needsTap(for: app) { reconcileTap(for: app) } }
         if let deviceUID = deviceUID {
             // Explicit device selection - stop following default
             followsDefault.remove(app.id)
@@ -938,6 +948,7 @@ final class AudioEngine {
 
         // Switch tap if needed
         guard let targetUID = appDeviceRouting[app.id] else { return }
+        guard needsTap(for: app) else { return }   // the defer drops an unneeded tap
         let preferredTapSourceUID = preferredTapSourceDeviceUID(forOutputUIDs: [targetUID], isFollowsDefault: followsDefault.contains(app.id))
         if let tap = taps[app.id] {
             Task {
@@ -1005,6 +1016,10 @@ final class AudioEngine {
 
     /// Updates tap configuration based on current mode and selected devices
     private func updateTapForCurrentMode(for app: AudioApp) async {
+        guard needsTap(for: app) else {
+            reconcileTap(for: app)
+            return
+        }
         let mode = getDeviceSelectionMode(for: app)
 
         let deviceUIDs: [String]
@@ -1189,7 +1204,12 @@ final class AudioEngine {
                 continue
             }
 
-            // Always create tap for audio apps (always-on strategy)
+            // On-demand taps: an app at its defaults plays straight through macOS (no tap,
+            // no CPU, no "recording system audio" indicator). See needsTap(for:).
+            guard needsTap(for: app) else {
+                appliedPIDs.insert(app.id)
+                continue
+            }
             ensureTapExists(for: app, deviceUID: deviceUID)
 
             // Only mark as applied if tap was successfully created
@@ -1209,6 +1229,70 @@ final class AudioEngine {
                 taps[app.id]?.isMuted = true
             }
         }
+    }
+
+    // MARK: - On-demand taps
+
+    /// Whether `app` needs a process tap. Each tap captures the app's audio, costs CPU, and makes
+    /// macOS show SilkMic as recording system audio, so apps left at their defaults (100 %,
+    /// not muted, following the system output, flat EQ) get none and play straight through
+    /// macOS. Features that change every app's sound (AutoEQ, loudness, a software-volume
+    /// output) still need taps for all apps.
+    func needsTap(for app: AudioApp) -> Bool {
+        guard !settingsManager.isIgnored(app.persistenceIdentifier) else { return false }
+        if abs(volumeState.getVolume(for: app.id) - 1) > 0.001 { return true }
+        if volumeState.getBoost(for: app.id) != .x1 { return true }
+        if volumeState.getMute(for: app.id) { return true }
+        if volumeState.getDeviceSelectionMode(for: app.id) == .multi { return true }
+        if !followsDefault.contains(app.id) { return true }   // routed to a chosen device
+        let eq = settingsManager.getEQSettings(for: app.persistenceIdentifier)
+        if eq.isEnabled && eq.clampedGains.contains(where: { abs($0) > 0.01 }) { return true }
+        let appSettings = settingsManager.appSettings
+        if appSettings.loudnessCompensationEnabled || appSettings.loudnessEqualizationEnabled { return true }
+        if let uid = appDeviceRouting[app.id] ?? deviceVolumeMonitor.defaultDeviceUID {
+            if settingsManager.getAutoEQSelection(for: uid)?.isEnabled == true { return true }
+            if let device = deviceMonitor.device(for: uid), outputVolumeBackend(for: device.id) == .software {
+                return true
+            }
+        }
+        return false
+    }
+
+    /// Creates or removes `app`'s tap to match `needsTap(for:)`. Removal waits a few seconds so
+    /// dragging a slider through 100 % does not tear the tap down and rebuild it.
+    func reconcileTap(for app: AudioApp) {
+        if needsTap(for: app) {
+            pendingTapRelease.removeValue(forKey: app.id)?.cancel()
+            guard taps[app.id] == nil else { return }
+            if volumeState.getDeviceSelectionMode(for: app.id) == .multi {
+                Task { await updateTapForCurrentMode(for: app) }
+            } else if let uid = appDeviceRouting[app.id] ?? deviceVolumeMonitor.defaultDeviceUID {
+                appDeviceRouting[app.id] = uid
+                ensureTapExists(for: app, deviceUID: uid)
+            }
+        } else if taps[app.id] != nil, pendingTapRelease[app.id] == nil {
+            let pid = app.id
+            pendingTapRelease[pid] = Task { @MainActor [weak self] in
+                try? await Task.sleep(for: self?.tapReleaseDelay ?? .seconds(3))
+                guard let self, !Task.isCancelled else { return }
+                self.pendingTapRelease[pid] = nil
+                guard let current = self.apps.first(where: { $0.id == pid }), !self.needsTap(for: current),
+                      let tap = self.taps.removeValue(forKey: pid) else { return }
+                tap.invalidate()
+                self.logger.debug("Released tap for \(current.name) (back to defaults)")
+            }
+        }
+    }
+
+    func reconcileAllTaps() {
+        for app in apps where appliedPIDs.contains(app.id) {
+            reconcileTap(for: app)
+        }
+    }
+
+    /// Reconciles on the next main-loop turn, after the caller's settings change is saved.
+    private func scheduleReconcileAllTaps() {
+        Task { @MainActor [weak self] in self?.reconcileAllTaps() }
     }
 
     private func ensureTapExists(for app: AudioApp, deviceUID: String) {
@@ -1311,6 +1395,8 @@ final class AudioEngine {
         for pid in followsDefault {
             appDeviceRouting[pid] = targetUID
         }
+        // The new output may need taps (software volume, AutoEQ) or no longer need them.
+        scheduleReconcileAllTaps()
 
         var tapsToSwitch: [(app: AudioApp, tap: any ProcessTapControlling)] = []
         for app in apps {
