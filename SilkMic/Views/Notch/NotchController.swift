@@ -135,7 +135,14 @@ final class NotchController {
     private func open() async {
         guard !isOpen, let screen = Self.notchScreen() else { return }
         isOpen = true
-        let notch = DynamicNotch(hoverBehavior: [.keepVisible, .hapticFeedback]) { [voice] in
+        // Never stack panels: a previous one that is still closing goes away first.
+        if let previous = notch {
+            notch = nil
+            Self.dismiss(previous)
+        }
+        // No `.keepVisible`: we decide when to close (pointer away, or a click), and with it a
+        // hide could wait forever on a stale hover state and leave the window open.
+        let notch = DynamicNotch(hoverBehavior: [.hapticFeedback]) { [voice] in
             NotchVoiceView(voice: voice)
         }
         // Springy drop-down with a little bounce; Reduce Motion falls back to a plain ease.
@@ -150,8 +157,21 @@ final class NotchController {
     private func close() async {
         guard isOpen else { return }
         isOpen = false
-        await notch?.hide()
-        notch = nil
+        guard let notch else { return }
+        self.notch = nil
+        // Animate out, but never wait more than a second: a panel that does not finish hiding
+        // is closed anyway, so windows cannot pile up (each one keeps drawing and using memory).
+        Task { await notch.hide() }
+        for _ in 0..<10 where notch.windowController != nil {
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        Self.dismiss(notch)
+    }
+
+    /// Closes the panel's window right away (no-op when it already closed itself).
+    private static func dismiss(_ notch: DynamicNotch<NotchVoiceView, EmptyView, EmptyView>) {
+        notch.windowController?.close()
+        notch.windowController = nil
     }
 
     /// Closes once the pointer is neither on the notch nor on the open panel.
