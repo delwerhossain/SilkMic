@@ -36,7 +36,10 @@ final class NotchController {
         screenObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in self?.rebuild() }
+            Task { @MainActor in
+                self?.rebuild()
+                self?.closeStrayWindowAfterScreenChange()
+            }
         }
         // The Settings toggle writes the same UserDefaults key.
         defaultsObserver = NotificationCenter.default.addObserver(
@@ -135,11 +138,17 @@ final class NotchController {
     private func open() async {
         guard !isOpen, let screen = Self.notchScreen() else { return }
         isOpen = true
-        // Never stack panels: a previous one that is still closing goes away first.
-        if let previous = notch {
-            notch = nil
-            Self.dismiss(previous)
-        }
+        let notch = self.notch ?? makeNotch()
+        self.notch = notch
+        await notch.expand(on: screen)
+        scheduleCloseIfAway()
+    }
+
+    /// One panel for the app's whole life. DynamicNotchKit never frees a DynamicNotch (it keeps
+    /// listening for screen changes forever), and on every screen change each instance opens a
+    /// new window on the main display. Making one per open leaked a window per instance at
+    /// every display sleep/wake, each redrawing glass all day (60 % CPU after a night).
+    private func makeNotch() -> DynamicNotch<NotchVoiceView, EmptyView, EmptyView> {
         // No `.keepVisible`: we decide when to close (pointer away, or a click), and with it a
         // hide could wait forever on a stale hover state and leave the window open.
         let notch = DynamicNotch(hoverBehavior: [.hapticFeedback]) { [voice] in
@@ -149,29 +158,44 @@ final class NotchController {
         notch.transitionConfiguration.openingAnimation = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
             ? .easeOut(duration: 0.2)
             : .spring(response: 0.42, dampingFraction: 0.62)
-        self.notch = notch
-        await notch.expand(on: screen)
-        scheduleCloseIfAway()
+        return notch
     }
 
     private func close() async {
         guard isOpen else { return }
         isOpen = false
         guard let notch else { return }
-        self.notch = nil
-        // Animate out, but never wait more than a second: a panel that does not finish hiding
-        // is closed anyway, so windows cannot pile up (each one keeps drawing and using memory).
-        Task { await notch.hide() }
-        for _ in 0..<10 where notch.windowController != nil {
+        // Animate out, but never wait more than a second, then close the window anyway.
+        let done = HideFlag()
+        Task { await notch.hide(); done.finished = true }
+        for _ in 0..<10 where !done.finished {
             try? await Task.sleep(for: .milliseconds(100))
         }
+        let finished = done.finished
         Self.dismiss(notch)
+        // A hide that never finished leaves the instance thinking it is still open (it would
+        // ignore the next expand), so start over with a fresh one in that rare case.
+        if !finished { self.notch = nil }
     }
 
     /// Closes the panel's window right away (no-op when it already closed itself).
     private static func dismiss(_ notch: DynamicNotch<NotchVoiceView, EmptyView, EmptyView>) {
         notch.windowController?.close()
         notch.windowController = nil
+    }
+
+    /// DynamicNotchKit reopens its window on the main display after every screen change, even
+    /// while the panel is closed. Close it again once the library has done that.
+    private func closeStrayWindowAfterScreenChange() {
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(600))
+            guard let self, let notch = self.notch else { return }
+            if self.isOpen {
+                await self.close()
+            } else {
+                Self.dismiss(notch)
+            }
+        }
     }
 
     /// Closes once the pointer is neither on the notch nor on the open panel.
@@ -188,6 +212,12 @@ final class NotchController {
             }
         }
     }
+}
+
+/// Set when a panel's hide animation completes (polled by `close()`, which never waits long).
+@MainActor
+private final class HideFlag {
+    var finished = false
 }
 
 /// Invisible view over the notch that reports hover and clicks.
