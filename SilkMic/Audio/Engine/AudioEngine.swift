@@ -574,9 +574,11 @@ final class AudioEngine {
             processMonitor.start()
         }
         deviceMonitor.start()
+        refreshCallState()   // an app already in a call at launch is not tapped
         applyPersistedSettings()
         if permission.status == .authorized {
             startHealthMonitor()
+            startCallWatch()
         }
 
         // Restore locked input device if feature is enabled
@@ -589,6 +591,8 @@ final class AudioEngine {
 
     func stop() {
         stopHealthMonitor()
+        callWatchTask?.cancel()
+        callWatchTask = nil
         processMonitor.stop()
         deviceMonitor.stop()
         for tap in taps.values {
@@ -1240,6 +1244,10 @@ final class AudioEngine {
     /// output) still need taps for all apps.
     func needsTap(for app: AudioApp) -> Bool {
         guard !settingsManager.isIgnored(app.persistenceIdentifier) else { return false }
+        // In a call (the app is using a microphone): play its audio untouched. macOS ducks
+        // every *other* app's sound during a voice-processing call, and a tapped app's audio is
+        // replayed by SilkMic, so the far end of the call became quiet.
+        if appsInCall.contains(app.id) { return false }
         if abs(volumeState.getVolume(for: app.id) - 1) > 0.001 { return true }
         if volumeState.getBoost(for: app.id) != .x1 { return true }
         if volumeState.getMute(for: app.id) { return true }
@@ -1280,6 +1288,41 @@ final class AudioEngine {
                       let tap = self.taps.removeValue(forKey: pid) else { return }
                 tap.invalidate()
                 self.logger.debug("Released tap for \(current.name) (back to defaults)")
+            }
+        }
+    }
+
+    /// Apps currently capturing audio input (calls); see needsTap(for:).
+    private(set) var appsInCall: Set<pid_t> = []
+    private var callWatchTask: Task<Void, Never>?
+    /// Reads whether a process object is capturing input (injectable for tests).
+    var isProcessRunningInput: (AudioObjectID) -> Bool = { $0.readProcessIsRunningInput() }
+
+    /// Updates `appsInCall` and moves taps out of the way of calls (and back after them).
+    func refreshCallState() {
+        let now = Set(apps.filter { app in app.processObjectIDs.contains(where: isProcessRunningInput) }.map(\.id))
+        guard now != appsInCall else { return }
+        let changed = now.symmetricDifference(appsInCall)
+        appsInCall = now
+        for app in apps where changed.contains(app.id) {
+            if now.contains(app.id), let tap = taps.removeValue(forKey: app.id) {
+                pendingTapRelease.removeValue(forKey: app.id)?.cancel()
+                tap.invalidate()   // right away: the call should not be ducked even for a moment
+                logger.info("\(app.name) is in a call; playing its audio untouched")
+            } else {
+                reconcileTap(for: app)
+            }
+        }
+    }
+
+    /// Cheap poll (a property read per audio app every 1.5 s) for calls starting and ending.
+    private func startCallWatch() {
+        guard callWatchTask == nil else { return }
+        callWatchTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(1500))
+                guard let self, !Task.isCancelled else { return }
+                self.refreshCallState()
             }
         }
     }

@@ -120,3 +120,45 @@ struct AudioEngineOnDemandTapTests {
         #expect(fix.engine.needsTap(for: fix.app))
     }
 }
+
+@MainActor
+@Suite("AudioEngine — calls play untouched")
+struct AudioEngineCallTapTests {
+    @Test("An app in a call loses its tap, and gets it back when the call ends")
+    func callReleasesTap() throws {
+        let settings = SettingsManager(directory: FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString))
+        let deviceMonitor = MockAudioDeviceMonitor()
+        let device = AudioDevice(id: AudioDeviceID(78), uid: "uid-out", name: "Out", icon: nil, supportsAutoEQ: false)
+        deviceMonitor.addOutputDevice(device)
+        let volume = MockDeviceVolumeProviding(deviceMonitor: deviceMonitor)
+        volume.defaultDeviceUID = device.uid
+        let app = AudioApp(id: 5151, processObjectIDs: [AudioObjectID(900)], name: "Caller", icon: NSImage(),
+                           bundleID: "com.test.caller")
+        let processMonitor = StubProcessMonitor()
+        processMonitor.activeApps = [app]
+        let permission = AudioRecordingPermission()
+        permission.status = .authorized
+        var created = 0
+        let engine = AudioEngine(
+            permission: permission, settingsManager: settings, autoEQProfileManager: AutoEQProfileManager(),
+            deviceProvider: deviceMonitor, processMonitor: processMonitor, deviceVolumeMonitor: volume,
+            tapFactory: { app, uids, _ in created += 1; return RecordingProcessTapController(app: app, deviceUIDs: uids) },
+            startMonitorsAutomatically: false
+        )
+        var inCall = false
+        engine.isProcessRunningInput = { _ in inCall }
+        engine.applyPersistedSettings()
+        engine.setVolume(for: app, to: 0.5)
+        #expect(created == 1)
+
+        inCall = true
+        engine.refreshCallState()
+        #expect(!engine.needsTap(for: app))
+
+        inCall = false
+        engine.refreshCallState()
+        #expect(engine.needsTap(for: app))
+        #expect(created == 2)   // tap recreated after the call
+    }
+}
